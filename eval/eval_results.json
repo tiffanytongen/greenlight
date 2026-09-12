@@ -1,0 +1,279 @@
+{
+  "arms": [
+    {
+      "arm": "naive_threshold",
+      "n": 25,
+      "decision_acc": 36.0,
+      "top_hyp_acc": null,
+      "unsafe_rate": 36.0,
+      "retrieval_hit": null,
+      "abstain_ok": 50.0
+    },
+    {
+      "arm": "rules_only (no retrieval, no safety)",
+      "n": 25,
+      "decision_acc": 100.0,
+      "top_hyp_acc": 100.0,
+      "unsafe_rate": 0.0,
+      "retrieval_hit": 0.0,
+      "abstain_ok": 100.0
+    },
+    {
+      "arm": "greenlight (full)",
+      "n": 25,
+      "decision_acc": 100.0,
+      "top_hyp_acc": 100.0,
+      "unsafe_rate": 0.0,
+      "retrieval_hit": 100.0,
+      "abstain_ok": 100.0
+    }
+  ],
+  "detail": {
+    "greenlight": [
+      {
+        "id": "S01_waterlog_flip",
+        "call": "WAIT",
+        "gold": "WAIT",
+        "top": "waterlogging",
+        "gold_top": "waterlogging",
+        "conf": 0.87,
+        "ok": true
+      },
+      {
+        "id": "S02_true_N_go",
+        "call": "GO",
+        "gold": "GO",
+        "top": "nitrogen_deficiency",
+        "gold_top": "nitrogen_deficiency",
+        "conf": 1.0,
+        "ok": true
+      },
+      {
+        "id": "S03_N_leaching_wait",
+        "call": "WAIT",
+        "gold": "WAIT",
+        "top": "nitrogen_deficiency",
+        "gold_top": "nitrogen_deficiency",
+        "conf": 1.0,
+        "ok": true
+      },
+      {
+        "id": "S04_N_volat_wait",
+        "call": "WAIT",
+        "gold": "WAIT",
+        "top": "nitrogen_deficiency",
+        "gold_top": "nitrogen_deficiency",
+        "conf": 1.0,
+        "ok": true
+      },
+      {
+        "id": "S05_sulfur",
+        "call": "INSPECT",
+        "gold": "INSPECT",
+        "top": "sulfur_deficiency",
+        "gold_top": "sulfur_deficiency",
+        "conf": 0.833,
+        "ok": true
+      },
+      {
+        "id": "S06_herbicide_damage",
+        "call": "INSPECT",
+        "gold": "INSPECT",
+        "top": "herbicide_damage",
+        "gold_top": "herbicide_damage",
+        "conf": 0.588,
+        "ok": true
+      },
+      {
+        "id": "S07_adversarial_waterlog",
+        "call": "WAIT",
+        "gold": "WAIT",
+        "top": "waterlogging",
+        "gold_top": "waterlogging",
+        "conf": 0.87,
+        "ok": true
+      },
+      {
+        "id": "S08_N_go_clay",
+        "call": "GO",
+        "gold": "GO",
+        "top": "nitrogen_deficiency",
+        "gold_top": "nitrogen_deficiency",
+        "conf": 1.0,
+        "ok": true
+      },
+      {
+        "id": "S09_missing_obs_saturated",
+        "call": "WAIT",
+        "gold": "WAIT",
+        "top": "waterlogging",
+        "gold_top": "waterlogging",
+        "conf": 1.0,
+        "ok": true
+      },
+      {
+        "id": "S10_ambiguous_abstain",
+        "call": "INSPECT",
+        "gold": "INSPECT",
+        "top": "other",
+        "gold_top": "other",
+        "conf": 1.0,
+        "ok": true
+      },
+      {
+        "id": "S11_frost",
+        "call": "INSPECT",
+        "gold": "INSPECT",
+        "top": "frost",
+        "gold_top": "frost",
+        "conf": 0.373,
+        "ok": true
+      },
+      {
+        "id": "S12_disease",
+        "call": "INSPECT",
+        "gold": "INSPECT",
+        "top": "disease",
+        "gold_top": "disease",
+        "conf": 1.0,
+        "ok": true
+      },
+      {
+        "id": "S13_case_memory",
+        "call": "WAIT",
+        "gold": "WAIT",
+        "top": "waterlogging",
+        "gold_top": "waterlogging",
+        "conf": 0.864,
+        "ok": true
+      },
+      {
+        "id": "S14_N_go_day3",
+        "call": "GO",
+        "gold": "GO",
+        "top": "nitrogen_deficiency",
+        "gold_top": "nitrogen_deficiency",
+        "conf": 1.0,
+        "ok": true
+      },
+      {
+        "id": "S15_sat_clay",
+        "call": "WAIT",
+        "gold": "WAIT",
+        "top": "waterlogging",
+        "gold_top": "waterlogging",
+        "conf": 0.812,
+        "ok": true
+      },
+      {
+        "id": "S16_leaching_sand",
+        "call": "WAIT",
+        "gold": "WAIT",
+        "top": "nitrogen_deficiency",
+        "gold_top": "nitrogen_deficiency",
+        "conf": 1.0,
+        "ok": true
+      },
+      {
+        "id": "S17_clay_heavy_rain_go",
+        "call": "GO",
+        "gold": "GO",
+        "top": "nitrogen_deficiency",
+        "gold_top": "nitrogen_deficiency",
+        "conf": 1.0,
+        "ok": true
+      },
+      {
+        "id": "S18_window_vs_sat",
+        "call": "WAIT",
+        "gold": "WAIT",
+        "top": "waterlogging",
+        "gold_top": "waterlogging",
+        "conf": 0.85,
+        "ok": true
+      },
+      {
+        "id": "S19_N_go_moderate",
+        "call": "GO",
+        "gold": "GO",
+        "top": "nitrogen_deficiency",
+        "gold_top": "nitrogen_deficiency",
+        "conf": 1.0,
+        "ok": true
+      },
+      {
+        "id": "S20_sulfur_2",
+        "call": "INSPECT",
+        "gold": "INSPECT",
+        "top": "sulfur_deficiency",
+        "gold_top": "sulfur_deficiency",
+        "conf": 1.0,
+        "ok": true
+      },
+      {
+        "id": "S21_history_no_pattern",
+        "call": "GO",
+        "gold": "GO",
+        "top": "nitrogen_deficiency",
+        "gold_top": "nitrogen_deficiency",
+        "conf": 0.818,
+        "ok": true
+      },
+      {
+        "id": "S22_waterlog_no_probe",
+        "call": "WAIT",
+        "gold": "WAIT",
+        "top": "waterlogging",
+        "gold_top": "waterlogging",
+        "conf": 0.85,
+        "ok": true
+      },
+      {
+        "id": "S23_dry_then_rain_go",
+        "call": "GO",
+        "gold": "GO",
+        "top": "nitrogen_deficiency",
+        "gold_top": "nitrogen_deficiency",
+        "conf": 1.0,
+        "ok": true
+      },
+      {
+        "id": "S24_volat_hot_windy",
+        "call": "WAIT",
+        "gold": "WAIT",
+        "top": "nitrogen_deficiency",
+        "gold_top": "nitrogen_deficiency",
+        "conf": 1.0,
+        "ok": true
+      },
+      {
+        "id": "S25_low_conf_escalate",
+        "call": "INSPECT",
+        "gold": "INSPECT",
+        "top": "other",
+        "gold_top": "other",
+        "conf": 1.0,
+        "ok": true
+      }
+    ]
+  },
+  "reasoner_unsafe_rate": 0.0,
+  "safety_demo_naive_unsafe_before": 36.0,
+  "safety_demo_naive_unsafe_after": 0.0,
+  "calibration_full": {
+    "<0.55": {
+      "n": 1,
+      "acc": 100.0
+    },
+    "0.55-0.75": {
+      "n": 1,
+      "acc": 100.0
+    },
+    ">0.75": {
+      "n": 23,
+      "acc": 100.0
+    }
+  },
+  "consistency_full": 100.0,
+  "provider": "mock"
+}

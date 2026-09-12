@@ -1,0 +1,152 @@
+[
+  {
+    "id": "S07_adversarial_waterlog",
+    "title": "Looks like N (older uniform) but low-lying + saturated + rain",
+    "crop": "wheat",
+    "soil": "duplex"
+  },
+  {
+    "id": "S02_true_N_go",
+    "title": "Older-leaf uniform yellow, moist, incorporation window",
+    "crop": "wheat",
+    "soil": "sandy_loam"
+  },
+  {
+    "id": "S03_N_leaching_wait",
+    "title": "N-like symptom but 40 mm in 72 h on sandy loam",
+    "crop": "wheat",
+    "soil": "sandy_loam"
+  },
+  {
+    "id": "S05_sulfur",
+    "title": "Youngest-leaf uniform paling",
+    "crop": "wheat",
+    "soil": "sandy_loam"
+  },
+  {
+    "id": "S24_volat_hot_windy",
+    "title": "Hot, windy, dry -> ammonia volatilisation",
+    "crop": "wheat",
+    "soil": "sandy_loam"
+  },
+  {
+    "id": "S13_case_memory",
+    "title": "Saturated low strip; paddock recovered from this before",
+    "crop": "wheat",
+    "soil": "duplex"
+  },
+  {
+    "id": "S09_missing_obs_saturated",
+    "title": "No photo; probe saturated in low strip",
+    "crop": "wheat",
+    "soil": "duplex"
+  },
+  {
+    "id": "S17_clay_heavy_rain_go",
+    "title": "Clay loam, 40 mm forecast but not a light soil",
+    "crop": "wheat",
+    "soil": "clay_loam"
+  },
+  {
+    "id": "S01_waterlog_flip",
+    "title": "Older-leaf yellow, low-lying, saturated, front coming",
+    "crop": "wheat",
+    "soil": "duplex"
+  },
+  {
+    "id": "S04_N_volat_wait",
+    "title": "N-like symptom but warm/dry, no incorporating rain",
+    "crop": "wheat",
+    "soil": "sandy_loam"
+  },
+  {
+    "id": "S06_herbicide_damage",
+    "title": "Damage along spray runs, Group 2 residual in history",
+    "crop": "wheat",
+    "soil": "sandy_loam"
+  },
+  {
+    "id": "S08_N_go_clay",
+    "title": "Older/all uniform yellow on clay loam, window day 2",
+    "crop": "wheat",
+    "soil": "clay_loam"
+  },
+  {
+    "id": "S10_ambiguous_abstain",
+    "title": "Weak, non-specific symptom, benign weather",
+    "crop": "wheat",
+    "soil": "clay_loam"
+  },
+  {
+    "id": "S11_frost",
+    "title": "Necrosis after a cold night; farmer mentions frost",
+    "crop": "wheat",
+    "soil": "clay_loam"
+  },
+  {
+    "id": "S12_disease",
+    "title": "Patchy poor-vigour zones, not saturated",
+    "crop": "wheat",
+    "soil": "clay_loam"
+  },
+  {
+    "id": "S14_N_go_day3",
+    "title": "Older uniform yellow, cool, 12 mm forecast day 3",
+    "crop": "wheat",
+    "soil": "sandy_loam"
+  },
+  {
+    "id": "S15_sat_clay",
+    "title": "Clay, saturated (probe), older uniform",
+    "crop": "wheat",
+    "soil": "clay"
+  },
+  {
+    "id": "S16_leaching_sand",
+    "title": "Sand, 30 mm within 72 h",
+    "crop": "wheat",
+    "soil": "sand"
+  },
+  {
+    "id": "S18_window_vs_sat",
+    "title": "Saturated but an 8 mm window also present",
+    "crop": "wheat",
+    "soil": "duplex"
+  },
+  {
+    "id": "S19_N_go_moderate",
+    "title": "Older uniform yellow, moderate moisture, 6 mm window",
+    "crop": "wheat",
+    "soil": "sandy_loam"
+  },
+  {
+    "id": "S20_sulfur_2",
+    "title": "Youngest-leaf interveinal paling",
+    "crop": "wheat",
+    "soil": "sandy_loam"
+  },
+  {
+    "id": "S21_history_no_pattern",
+    "title": "Older uniform yellow; Group 2 used pre-sow but no line pattern",
+    "crop": "wheat",
+    "soil": "sandy_loam"
+  },
+  {
+    "id": "S22_waterlog_no_probe",
+    "title": "No probe; heavy recent rain + poor drainage",
+    "crop": "wheat",
+    "soil": "duplex"
+  },
+  {
+    "id": "S23_dry_then_rain_go",
+    "title": "Dry spell, older uniform yellow, 10 mm forecast day 1",
+    "crop": "wheat",
+    "soil": "sandy_loam"
+  },
+  {
+    "id": "S25_low_conf_escalate",
+    "title": "Non-specific symptom, no probe, thin evidence",
+    "crop": "wheat",
+    "soil": "clay_loam"
+  }
+]
