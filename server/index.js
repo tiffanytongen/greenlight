@@ -37,8 +37,10 @@ const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || "";
 const ELEVEN_KEY = process.env.ELEVENLABS_API_KEY || "";
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
 const VOICE = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM"; // Rachel
-const STT_MODEL = process.env.ELEVENLABS_STT_MODEL || "scribe_v1";
-const TTS_MODEL = process.env.ELEVENLABS_TTS_MODEL || "eleven_turbo_v2_5";
+// scribe_v1 / eleven_turbo_v2_5 are deprecated (removed mid-2026) — current models:
+const STT_MODEL = process.env.ELEVENLABS_STT_MODEL || "scribe_v2";
+const TTS_MODEL = process.env.ELEVENLABS_TTS_MODEL || "eleven_flash_v2_5";
+const ELEVEN_BASE = (process.env.ELEVENLABS_BASE_URL || "https://api.elevenlabs.io").replace(/\/+$/, "");
 const MAX_BODY = 20 * 1024 * 1024;
 
 // ---- observation schema guard (mirror of the app's enums)
@@ -138,12 +140,15 @@ const handlers = {
     const form = new FormData();
     form.append("file", new Blob([Buffer.from(b64, "base64")], { type: mime }), "note.m4a");
     form.append("model_id", STT_MODEL);
-    const res = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
+    const res = await fetch(`${ELEVEN_BASE}/v1/speech-to-text`, {
       method: "POST", headers: { "xi-api-key": ELEVEN_KEY }, body: form,
     });
     if (!res.ok) throw httpError(502, `elevenlabs stt ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const j = await res.json();
-    return { text: j.text || "" };
+    // single-channel response carries .text; multi-channel carries .transcripts[]
+    const text = j.text || (Array.isArray(j.transcripts)
+      ? j.transcripts.map(t => t.text || "").join(" ").trim() : "");
+    return { text };
   },
 
   "POST /speak": async (body) => {
@@ -151,7 +156,7 @@ const handlers = {
     const text = String(body.text || "").slice(0, 900);
     if (!text.trim()) throw httpError(400, "text required");
     const res = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE}?output_format=mp3_44100_128`, {
+      `${ELEVEN_BASE}/v1/text-to-speech/${VOICE}?output_format=mp3_44100_128`, {
         method: "POST",
         headers: { "xi-api-key": ELEVEN_KEY, "content-type": "application/json" },
         body: JSON.stringify({ text, model_id: TTS_MODEL }),
