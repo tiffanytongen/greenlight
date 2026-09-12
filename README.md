@@ -30,6 +30,18 @@ Everything above runs with **zero credentials**: the reasoner falls back to a
 deterministic heuristic (which also serves as the *rules-only* ablation arm) and
 weather comes from the synthetic snapshot.
 
+## Phone demo (Expo Go) and web app
+
+The deterministic engine is also ported to JavaScript — **verified to reproduce the
+Python pipeline's decisions on all 25 eval scenarios** — and shipped two ways:
+
+- **`mobile/`** — a React Native app for **Expo Go**. From `mobile/`:
+  `npm install && npx expo start` then scan the QR code with the Expo Go app
+  (use `npx expo start --tunnel` if the phone isn't on the same wifi).
+  Advisor + custom paddock builder + on-device evaluation, no server, no keys.
+- **`webapp/index.html`** — the same app as a single self-contained HTML file;
+  open it in any browser or host it anywhere.
+
 ## Turning on the real LLM / live weather
 
 ```bash

@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Greenlight",
+    "slug": "greenlight",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#121814",
+    "splash": { "backgroundColor": "#121814" },
+    "ios": { "supportsTablet": true },
+    "android": { "backgroundColor": "#121814" }
+  }
+}
