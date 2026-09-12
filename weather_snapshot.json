@@ -1,0 +1,170 @@
+[
+  {
+    "day_offset": -14,
+    "precip_mm": 0.0,
+    "tmax_c": 17.0,
+    "rh_pct": 68.0,
+    "wind_kmh": 9.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": -13,
+    "precip_mm": 0.0,
+    "tmax_c": 17.0,
+    "rh_pct": 68.0,
+    "wind_kmh": 9.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": -12,
+    "precip_mm": 0.0,
+    "tmax_c": 17.0,
+    "rh_pct": 68.0,
+    "wind_kmh": 9.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": -11,
+    "precip_mm": 12.0,
+    "tmax_c": 17.0,
+    "rh_pct": 68.0,
+    "wind_kmh": 9.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": -10,
+    "precip_mm": 0.0,
+    "tmax_c": 17.0,
+    "rh_pct": 68.0,
+    "wind_kmh": 9.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": -9,
+    "precip_mm": 0.0,
+    "tmax_c": 17.0,
+    "rh_pct": 68.0,
+    "wind_kmh": 9.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": -8,
+    "precip_mm": 12.0,
+    "tmax_c": 17.0,
+    "rh_pct": 68.0,
+    "wind_kmh": 9.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": -7,
+    "precip_mm": 0.0,
+    "tmax_c": 16.0,
+    "rh_pct": 72.0,
+    "wind_kmh": 10.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": -6,
+    "precip_mm": 0.0,
+    "tmax_c": 16.0,
+    "rh_pct": 72.0,
+    "wind_kmh": 10.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": -5,
+    "precip_mm": 0.0,
+    "tmax_c": 16.0,
+    "rh_pct": 72.0,
+    "wind_kmh": 10.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": -4,
+    "precip_mm": 0.0,
+    "tmax_c": 16.0,
+    "rh_pct": 72.0,
+    "wind_kmh": 10.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": -3,
+    "precip_mm": 26.0,
+    "tmax_c": 16.0,
+    "rh_pct": 72.0,
+    "wind_kmh": 10.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": -2,
+    "precip_mm": 0.0,
+    "tmax_c": 16.0,
+    "rh_pct": 72.0,
+    "wind_kmh": 10.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": -1,
+    "precip_mm": 0.0,
+    "tmax_c": 16.0,
+    "rh_pct": 72.0,
+    "wind_kmh": 10.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": 0,
+    "precip_mm": 0.0,
+    "tmax_c": 16.0,
+    "rh_pct": 70.0,
+    "wind_kmh": 10.0,
+    "soil_vwc": 0.4
+  },
+  {
+    "day_offset": 1,
+    "precip_mm": 0.0,
+    "tmax_c": 16.0,
+    "rh_pct": 70.0,
+    "wind_kmh": 10.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": 2,
+    "precip_mm": 8.0,
+    "tmax_c": 16.0,
+    "rh_pct": 70.0,
+    "wind_kmh": 10.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": 3,
+    "precip_mm": 0.0,
+    "tmax_c": 16.0,
+    "rh_pct": 70.0,
+    "wind_kmh": 10.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": 4,
+    "precip_mm": 0.0,
+    "tmax_c": 16.0,
+    "rh_pct": 70.0,
+    "wind_kmh": 10.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": 5,
+    "precip_mm": 4.0,
+    "tmax_c": 16.0,
+    "rh_pct": 70.0,
+    "wind_kmh": 10.0,
+    "soil_vwc": null
+  },
+  {
+    "day_offset": 6,
+    "precip_mm": 0.0,
+    "tmax_c": 16.0,
+    "rh_pct": 70.0,
+    "wind_kmh": 10.0,
+    "soil_vwc": null
+  }
+]
