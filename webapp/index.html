@@ -1,0 +1,1323 @@
+<meta charset="utf-8">
+<title>Greenlight — go / wait / switch / inspect</title>
+<style>
+  :root {
+    --bg: #F5F7F2; --surface: #FDFDFB; --surface2: #ECEFE6; --surface3: #E2E7DA;
+    --ink: #1B231E; --ink2: #46524A; --muted: #6E7A71; --line: #D6DCCE; --line2: #C4CCBA;
+    --accent: #2F6B44; --accent-soft: #E3EDE4; --accent-ink: #FFFFFF;
+    --rain: #4E7FA8; --rain-dim: #A8BFD2;
+    --go: #256B3E; --wait: #A87500; --switch: #7B58B8; --inspect: #BE3A2B;
+    --go-tint: #E4EEE5; --wait-tint: #F3EBD7; --switch-tint: #ECE6F5; --inspect-tint: #F6E3DF;
+    --shadow: 0 1px 2px rgba(27,35,30,.06), 0 4px 14px rgba(27,35,30,.05);
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121814; --surface: #1A211C; --surface2: #222B24; --surface3: #2A342C;
+      --ink: #E8EDE7; --ink2: #B7C2B8; --muted: #8B978E; --line: #2C362E; --line2: #3A463C;
+      --accent: #66B77E; --accent-soft: #21301F; --accent-ink: #0D130E;
+      --rain: #6FA8CF; --rain-dim: #3C566B;
+      --go: #2E8747; --wait: #B58B2A; --switch: #8E70C4; --inspect: #D05548;
+      --go-tint: #1C2B1F; --wait-tint: #2E2818; --switch-tint: #262133; --inspect-tint: #331F1C;
+      --shadow: 0 1px 2px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #F5F7F2; --surface: #FDFDFB; --surface2: #ECEFE6; --surface3: #E2E7DA;
+    --ink: #1B231E; --ink2: #46524A; --muted: #6E7A71; --line: #D6DCCE; --line2: #C4CCBA;
+    --accent: #2F6B44; --accent-soft: #E3EDE4; --accent-ink: #FFFFFF;
+    --rain: #4E7FA8; --rain-dim: #A8BFD2;
+    --go: #256B3E; --wait: #A87500; --switch: #7B58B8; --inspect: #BE3A2B;
+    --go-tint: #E4EEE5; --wait-tint: #F3EBD7; --switch-tint: #ECE6F5; --inspect-tint: #F6E3DF;
+    --shadow: 0 1px 2px rgba(27,35,30,.06), 0 4px 14px rgba(27,35,30,.05);
+  }
+  :root[data-theme="dark"] {
+    --bg: #121814; --surface: #1A211C; --surface2: #222B24; --surface3: #2A342C;
+    --ink: #E8EDE7; --ink2: #B7C2B8; --muted: #8B978E; --line: #2C362E; --line2: #3A463C;
+    --accent: #66B77E; --accent-soft: #21301F; --accent-ink: #0D130E;
+    --rain: #6FA8CF; --rain-dim: #3C566B;
+    --go: #2E8747; --wait: #B58B2A; --switch: #8E70C4; --inspect: #D05548;
+    --go-tint: #1C2B1F; --wait-tint: #2E2818; --switch-tint: #262133; --inspect-tint: #331F1C;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { background: var(--bg); }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Avenir Next", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    font-size: 15px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+          font-variant-numeric: tabular-nums; }
+  .app { max-width: 1160px; margin: 0 auto; padding: 20px 20px 64px; }
+
+  /* ---------- header ---------- */
+  .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+         flex-wrap: wrap; padding: 10px 2px 18px; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
+  .brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .wordmark { font-size: 26px; font-weight: 700; letter-spacing: .01em; margin: 0; }
+  .wordmark .dot { color: var(--accent); }
+  .tagline { color: var(--ink2); font-size: 14px; }
+  .scopechip { font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+               border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+  .tabs { display: flex; gap: 4px; background: var(--surface2); border: 1px solid var(--line);
+          border-radius: 999px; padding: 3px; }
+  .tabs button { border: 0; background: transparent; color: var(--ink2); font: inherit; font-weight: 600;
+                 font-size: 13.5px; padding: 6px 16px; border-radius: 999px; cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+  .tabs button:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible,
+  summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- advisor layout ---------- */
+  .advisor { display: grid; grid-template-columns: 296px minmax(0, 1fr); gap: 22px; align-items: start; }
+  @media (max-width: 920px) { .advisor { grid-template-columns: 1fr; } }
+
+  .rail { display: flex; flex-direction: column; gap: 16px; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+           box-shadow: var(--shadow); }
+  .panel-h { padding: 12px 14px 10px; font-size: 11.5px; font-weight: 700; letter-spacing: .09em;
+             text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+  .panel-b { padding: 12px 14px; }
+
+  .plist { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 6px; }
+  .plist button { text-align: left; border: 0; background: transparent; color: var(--ink2); font: inherit;
+                  font-size: 13.5px; line-height: 1.35; padding: 7px 9px; border-radius: 7px; cursor: pointer; }
+  .plist button:hover { background: var(--surface2); color: var(--ink); }
+  .plist button[aria-current="true"] { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+  .plist .pid { display: block; font-size: 10.5px; letter-spacing: .05em; color: var(--muted); }
+  details.group > summary { cursor: pointer; list-style: none; padding: 10px 14px 8px; font-size: 11.5px;
+    font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  details.group > summary::before { content: "▸ "; }
+  details.group[open] > summary::before { content: "▾ "; }
+  details.group + details.group { border-top: 1px solid var(--line); }
+
+  .togglerow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; }
+  .togglerow .lab { font-size: 13.5px; color: var(--ink2); }
+  .switchbtn { position: relative; width: 40px; height: 22px; border-radius: 999px; border: 1px solid var(--line2);
+               background: var(--surface3); cursor: pointer; padding: 0; flex: none; }
+  .switchbtn::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+                      border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.25);
+                      transition: left .15s ease; }
+  .switchbtn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); }
+  .switchbtn[aria-pressed="true"]::after { left: 20px; }
+  .enginenote { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  /* ---------- main column ---------- */
+  .main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .padhead { padding: 16px 18px; }
+  .padhead h2 { margin: 0 0 10px; font-size: 19px; font-weight: 700; text-wrap: balance; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 12.5px; color: var(--ink2); background: var(--surface2); border: 1px solid var(--line);
+          border-radius: 999px; padding: 3px 10px; }
+  .chip b { color: var(--ink); font-weight: 600; }
+  .note { margin-top: 10px; font-size: 13px; color: var(--muted); font-style: italic; }
+
+  /* weather strip */
+  .wx { padding: 14px 18px 10px; }
+  .wx-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .wx-title { font-size: 11.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  .wx-legend { display: flex; gap: 14px; font-size: 11.5px; color: var(--muted); flex-wrap: wrap; }
+  .wx-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .wxsvg { width: 100%; height: auto; display: block; margin-top: 4px; }
+  #wxtip { position: fixed; z-index: 30; pointer-events: none; background: var(--ink); color: var(--bg);
+           font-size: 12px; padding: 5px 9px; border-radius: 6px; opacity: 0; transition: opacity .1s;
+           max-width: 220px; }
+
+  .runrow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .btn { border: 0; border-radius: 8px; font: inherit; font-weight: 650; cursor: pointer; padding: 10px 22px; }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); font-size: 15px; }
+  .btn-primary:hover { filter: brightness(1.07); }
+  .runhint { font-size: 12.5px; color: var(--muted); }
+
+  /* pipeline trace */
+  .trace { padding: 6px 18px 12px; }
+  .stage { display: grid; grid-template-columns: 26px 108px minmax(0,1fr); gap: 10px; align-items: baseline;
+           padding: 7px 0; border-top: 1px solid var(--line); opacity: 0; transform: translateY(4px);
+           transition: opacity .28s ease, transform .28s ease; }
+  .stage:first-child { border-top: 0; }
+  .stage.on { opacity: 1; transform: none; }
+  .stage .n { font-size: 11px; color: var(--muted); }
+  .stage .nm { font-size: 12px; font-weight: 700; letter-spacing: .07em; }
+  .stage .dt { font-size: 12.5px; color: var(--ink2); overflow-wrap: anywhere; }
+  @media (prefers-reduced-motion: reduce) { .stage { transition: none; transform: none; } }
+
+  /* decision */
+  .results { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 18px; align-items: start; }
+  @media (max-width: 920px) { .results { grid-template-columns: 1fr; } }
+  .decision { overflow: hidden; }
+  .callstrip { padding: 18px 20px 14px; color: #fff; }
+  .callstrip .word { font-size: 34px; font-weight: 800; letter-spacing: .04em; line-height: 1; }
+  .callstrip .expl { font-size: 14px; opacity: .95; margin-top: 4px; }
+  .call-GO .callstrip { background: var(--go); } .call-WAIT .callstrip { background: var(--wait); }
+  .call-SWITCH .callstrip { background: var(--switch); } .call-INSPECT .callstrip { background: var(--inspect); }
+  .decision-b { padding: 14px 20px 18px; display: flex; flex-direction: column; gap: 14px; }
+
+  .confwrap { display: flex; flex-direction: column; gap: 5px; }
+  .conflab { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--ink2); }
+  .confbar { position: relative; height: 8px; border-radius: 4px; background: var(--surface3); }
+  .conffill { position: absolute; inset: 0 auto 0 0; border-radius: 4px; }
+  .call-GO .conffill { background: var(--go); } .call-WAIT .conffill { background: var(--wait); }
+  .call-SWITCH .conffill { background: var(--switch); } .call-INSPECT .conffill { background: var(--inspect); }
+  .conftick { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--muted); }
+  .conftick-lab { font-size: 11px; color: var(--muted); }
+
+  .alert { border-radius: 8px; padding: 10px 12px; font-size: 13.5px; }
+  .alert b { display: block; margin-bottom: 3px; }
+  .alert-safety { background: var(--inspect-tint); border: 1px solid var(--inspect); color: var(--ink); }
+  .alert-window { background: var(--accent-soft); border: 1px solid var(--accent); }
+  .alert-question { background: var(--wait-tint); border: 1px solid var(--wait); }
+  .alert ul { margin: 4px 0 0; padding-left: 18px; }
+
+  .sect-h { font-size: 11.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+            color: var(--muted); margin: 2px 0 6px; }
+  .whylist { margin: 0; padding-left: 19px; display: flex; flex-direction: column; gap: 5px; font-size: 14px; }
+  .altlist { margin: 0; padding-left: 19px; font-size: 13.5px; color: var(--ink2); }
+  .altlist b { color: var(--ink); }
+
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tile { background: var(--surface2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .tile .tl { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .tile .tv { font-size: 19px; font-weight: 700; margin-top: 2px; }
+  .tile .ts { font-size: 12px; color: var(--ink2); margin-top: 2px; }
+
+  /* differential + evidence */
+  .diffcard .panel-b { display: flex; flex-direction: column; gap: 13px; }
+  .hyp .hh { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .hyp .nm { font-weight: 650; font-size: 14px; text-transform: capitalize; }
+  .hyp .pc { font-size: 14px; font-weight: 700; }
+  .hyp .bar { height: 7px; border-radius: 4px; background: var(--surface3); margin: 5px 0 6px; position: relative; }
+  .hyp .fill { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--line2); }
+  .hyp.lead .fill { background: var(--accent); }
+  .ev { font-size: 12.5px; color: var(--ink2); display: flex; gap: 7px; }
+  .ev .sig { flex: none; font-weight: 700; }
+  .ev-for .sig { color: var(--accent); } .ev-against .sig { color: var(--inspect); }
+
+  details.exp { border-top: 1px solid var(--line); }
+  details.exp summary { cursor: pointer; padding: 11px 16px; font-size: 13px; font-weight: 600; color: var(--ink2);
+                        list-style: none; display: flex; justify-content: space-between; }
+  details.exp summary::after { content: "▸"; color: var(--muted); }
+  details.exp[open] summary::after { content: "▾"; }
+  details.exp .exp-b { padding: 0 16px 14px; }
+  pre.json { margin: 0; background: var(--surface2); border: 1px solid var(--line); border-radius: 8px;
+             padding: 10px 12px; font-size: 12px; line-height: 1.5; overflow-x: auto; }
+  .gchunk { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+            font-size: 13px; background: var(--surface); }
+  .gchunk .cid { font-weight: 700; }
+  .gchunk .src { display: block; margin-top: 5px; font-size: 11.5px; color: var(--muted); }
+  .gnote { font-size: 12.5px; color: var(--muted); margin: 2px 0 10px; }
+
+  /* custom form */
+  .cform { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+  @media (max-width: 640px) { .cform { grid-template-columns: 1fr; } }
+  .fld { display: flex; flex-direction: column; gap: 4px; }
+  .fld label { font-size: 12px; font-weight: 600; color: var(--ink2); }
+  .fld select, .fld input[type="number"] { font: inherit; font-size: 13.5px; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--line2); border-radius: 7px; padding: 6px 9px; }
+  .fld-check { flex-direction: row; align-items: center; gap: 8px; }
+  .fld-check label { font-weight: 500; }
+  .cform .span2 { grid-column: 1 / -1; }
+  .formsect { grid-column: 1 / -1; font-size: 11px; font-weight: 700; letter-spacing: .09em;
+              text-transform: uppercase; color: var(--muted); border-top: 1px solid var(--line);
+              padding-top: 10px; margin-top: 2px; }
+  .formsect:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+
+  /* ---------- evaluation ---------- */
+  .evalgrid { display: flex; flex-direction: column; gap: 18px; }
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+          box-shadow: var(--shadow); padding: 14px 16px; }
+  .stat .sl { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .stat .sv { font-size: 26px; font-weight: 750; margin-top: 3px; }
+  .stat .sv .arr { color: var(--muted); font-weight: 400; }
+  .stat .sd { font-size: 12.5px; color: var(--ink2); margin-top: 3px; }
+  .stat .good { color: var(--go); }
+  .tablewrap { overflow-x: auto; }
+  table.d { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  table.d th { text-align: left; font-size: 11px; letter-spacing: .07em; text-transform: uppercase;
+               color: var(--muted); font-weight: 700; padding: 8px 12px; border-bottom: 1px solid var(--line2); }
+  table.d td { padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  table.d tr:last-child td { border-bottom: 0; }
+  table.d td.num, table.d th.num { text-align: right; }
+  .hero-row td { font-weight: 700; background: var(--accent-soft); }
+  .badge { display: inline-block; font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
+           border-radius: 5px; padding: 2px 8px; color: #fff; }
+  .badge-GO { background: var(--go); } .badge-WAIT { background: var(--wait); }
+  .badge-SWITCH { background: var(--switch); } .badge-INSPECT { background: var(--inspect); }
+  .ok-yes { color: var(--go); font-weight: 700; } .ok-no { color: var(--inspect); font-weight: 700; }
+  .honesty { border-left: 3px solid var(--wait); background: var(--wait-tint); border-radius: 0 8px 8px 0;
+             padding: 12px 14px; font-size: 13.5px; color: var(--ink2); max-width: 72ch; }
+  .honesty b { color: var(--ink); }
+
+  footer { margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--line);
+           font-size: 12.5px; color: var(--muted); max-width: 78ch; }
+  footer p { margin: 6px 0; }
+</style>
+
+<div class="app">
+  <div class="top">
+    <div class="brand">
+      <h1 class="wordmark">greenlight<span class="dot">.</span></h1>
+      <span class="tagline">The go / wait / switch / inspect layer for farm input decisions.</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <span class="scopechip">MVP · nitrogen top-dress on wheat</span>
+      <div class="tabs" role="tablist" aria-label="View">
+        <button role="tab" id="tab-advisor" aria-selected="true">Advisor</button>
+        <button role="tab" id="tab-eval" aria-selected="false">Evaluation</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-advisor" class="advisor"></div>
+  <div id="view-eval" class="evalgrid" hidden></div>
+
+  <footer>
+    <p><b>How this works.</b> One pass, five stages: perception reports observations only (never a diagnosis);
+    deterministic weather signals compute saturation, leaching, volatilisation and incorporation windows;
+    retrieval pulls guideline text for <i>and against</i> every candidate cause; two-stage reasoning ranks a
+    differential and picks the call; and a deterministic safety layer can overrule the model — every override
+    is shown on screen.</p>
+    <p>This page runs the full deterministic Greenlight engine in your browser — the same rules-based reasoner,
+    retrieval and safety net as the Python pipeline, verified to reproduce its decisions on all 25 evaluation
+    scenarios. The LLM reasoning arm and live Open-Meteo weather live in the Python repo.
+    Prices and thresholds are demo defaults; guideline chunks are placeholders to be replaced with cited
+    GRDC / Agriculture Victoria text.</p>
+  </footer>
+</div>
+<div id="wxtip" role="presentation"></div>
+
+<script>
+/* Greenlight decision engine — faithful JS port of the Python package
+   (signals.py, retrieval.py, reasoning.py, safety.py, pipeline.py, run_eval.py).
+   Deterministic; verified against the Python engine on all 25 scenarios. */
+
+const CONFIG = {
+  UREA_PRICE_PER_T: 800.0,
+  BAD_TIMING_LOSS_LOW: 0.20,
+  BAD_TIMING_LOSS_HIGH: 0.40,
+  INCORP_RAIN_MIN_MM: 5.0,
+  INCORP_RAIN_MAX_MM: 15.0,
+  LEACHING_RAIN_MM_72H: 25.0,
+  LEACHING_SOILS: ["sand", "loamy_sand", "sandy_loam", "duplex"],
+  VOLAT_TMAX_C: 22.0,
+  SATURATION_VWC: 0.42,
+  DELTA_T_MIN: 2.0, DELTA_T_MAX: 8.0,
+  WIND_MIN_KMH: 3.0, WIND_MAX_KMH: 15.0,
+  CONFIDENCE_GO_MIN: 0.55,
+  RATE_DEVIATION_ALLOWED: 0.30,
+};
+
+/* Python-style round at nd decimals: correct rounding of the double's exact
+   decimal value, with ties going to the even digit (banker's rounding). */
+function pyRound(x, nd = 0) {
+  if (!Number.isFinite(x)) return x;
+  const t = x.toFixed(nd + 1); // exact tie <=> representable at nd+1 decimals, ending in 5
+  if (parseFloat(t) === x && t.endsWith("5")) {
+    let p = t.slice(0, -1);
+    if (p.endsWith(".")) p = p.slice(0, -1);
+    const kept = parseFloat(p); // truncated toward zero
+    const lastDigit = parseInt(p.replace("-", "").replace(".", "").slice(-1) || "0", 10);
+    if (lastDigit % 2 === 0) return kept === 0 ? 0 : kept;
+    const step = Math.pow(10, -nd);
+    return parseFloat((kept + Math.sign(x) * step).toFixed(nd));
+  }
+  const v = parseFloat(x.toFixed(nd)); // no tie: plain correct rounding
+  return v === 0 ? 0 : v;
+}
+
+// ------------------------------------------------------------------ corpus + retrieval
+const CORPUS = {
+  n_symptom: {
+    text: "Nitrogen deficiency usually shows first on older, lower leaves as a general yellowing, because nitrogen is mobile and moves to new growth.",
+    source: "PLACEHOLDER - replace with GRDC nitrogen fact sheet citation",
+  },
+  s_symptom: {
+    text: "Sulfur deficiency typically appears on the youngest leaves as a uniform paling, because sulfur is not readily remobilised within the plant; this distinguishes it from nitrogen deficiency, which shows first on older leaves.",
+    source: "PLACEHOLDER - replace with Agriculture Victoria nutrition note",
+  },
+  waterlog_symptom: {
+    text: "Temporary waterlogging can cause yellowing of older leaves that resembles nitrogen deficiency, because saturated roots cannot take up nutrients; such patches often occur in low-lying areas and may recover once the soil drains.",
+    source: "PLACEHOLDER - replace with GRDC waterlogging guidance",
+  },
+  denitrification: {
+    text: "When soil is waterlogged and oxygen-depleted, nitrate can be converted to gaseous forms and lost (denitrification), so applying nitrogen to saturated soil is inefficient.",
+    source: "PLACEHOLDER - replace with N loss pathways reference",
+  },
+  incorporation: {
+    text: "Surface-applied urea needs light rainfall or irrigation of roughly 5 to 15 mm within a few days to move into the soil; without incorporation a share of the nitrogen is lost to the air as ammonia, especially in warm, moist, windy conditions.",
+    source: "PLACEHOLDER - replace with urea volatilisation reference",
+  },
+  leaching: {
+    text: "On sandy or duplex soils, heavy rainfall of tens of millimetres shortly after nitrogen application can move nitrate below the root zone, reducing nitrogen available to the crop.",
+    source: "PLACEHOLDER - replace with leaching reference",
+  },
+  herbicide_damage: {
+    text: "Crop damage from a soil-applied residual herbicide tends to follow an application pattern such as along spray runs, rather than the low-lying pattern typical of waterlogging.",
+    source: "PLACEHOLDER - replace with herbicide crop-safety note",
+  },
+  yield_potential: {
+    text: "In Mediterranean-type environments seasonal yield potential is strongly influenced by in-season and spring rainfall, so a wet start can raise yield potential and nitrogen demand; a good season may justify maintaining rather than cutting planned nitrogen once the timing is corrected.",
+    source: "PLACEHOLDER - replace with GRDC seasonal N strategy note",
+  },
+  delta_t_window: {
+    text: "Herbicide application is generally advised within a Delta T range of about 2 to 8 and moderate wind, avoiding temperature inversions that can carry spray off target.",
+    source: "PLACEHOLDER - replace with GRDC spray application manual",
+  },
+  resistance: {
+    text: "Repeated use of the same herbicide mode of action selects for resistant weeds; rotating modes of action and using non-chemical tactics preserves effectiveness.",
+    source: "PLACEHOLDER - replace with resistance management reference",
+  },
+};
+
+const HYP_QUERIES = {
+  nitrogen_deficiency: ["nitrogen deficiency older leaves yellowing mobile",
+                        "urea incorporation rainfall ammonia loss"],
+  waterlogging: ["waterlogging yellowing older leaves low lying saturated roots",
+                 "denitrification nitrogen loss saturated soil"],
+  sulfur_deficiency: ["sulfur deficiency youngest leaves uniform paling immobile"],
+  herbicide_damage: ["herbicide residual crop damage spray run pattern"],
+  disease: ["root disease bare patches crop"],
+  frost: ["frost damage crop"],
+  other: ["crop stress yellowing causes"],
+};
+
+function tok(s) {
+  const counts = new Map();
+  for (const t of (s.toLowerCase().match(/[a-z]+/g) || [])) {
+    counts.set(t, (counts.get(t) || 0) + 1);
+  }
+  return counts;
+}
+
+function cosine(a, b) {
+  let num = 0;
+  for (const [t, va] of a) if (b.has(t)) num += va * b.get(t);
+  let da = 0; for (const v of a.values()) da += v * v;
+  let db = 0; for (const v of b.values()) db += v * v;
+  da = Math.sqrt(da); db = Math.sqrt(db);
+  return (da && db) ? num / (da * db) : 0;
+}
+
+const CORPUS_VECS = Object.entries(CORPUS).map(([cid, c]) => [cid, tok(c.text)]);
+
+function retrieverSearch(query, k = 3) {
+  const q = tok(query);
+  const scored = CORPUS_VECS.map(([cid, v]) => [cid, cosine(q, v)]);
+  scored.sort((a, b) => b[1] - a[1]); // stable: ties keep corpus order
+  return scored.slice(0, k).map(([cid]) => cid);
+}
+
+function retrieveForHypotheses(causes, kEach = 2) {
+  const hits = [];
+  for (const cause of causes) {
+    for (const query of (HYP_QUERIES[cause] || [cause])) {
+      for (const cid of retrieverSearch(query, kEach)) {
+        if (!hits.includes(cid)) hits.push(cid);
+      }
+    }
+  }
+  return hits;
+}
+
+// ------------------------------------------------------------------ signals
+function wetBulbStull(tC, rhPct) {
+  const rh = Math.max(1.0, Math.min(100.0, rhPct));
+  return (tC * Math.atan(0.151977 * Math.sqrt(rh + 8.313659))
+          + Math.atan(tC + rh) - Math.atan(rh - 1.676331)
+          + 0.00391838 * Math.pow(rh, 1.5) * Math.atan(0.023101 * rh) - 4.686035);
+}
+function deltaT(tC, rhPct) { return pyRound(tC - wetBulbStull(tC, rhPct), 1); }
+
+function computeSignals(weather, soil, plan) {
+  const app = plan.intended_date_offset_days;
+  const inRange = (lo, hi) => weather.filter(d => lo <= d.day_offset && d.day_offset <= hi);
+  const rain = (lo, hi) => pyRound(inRange(lo, hi).reduce((s, d) => s + d.precip_mm, 0), 1);
+
+  const past7 = rain(-7, -1), past14 = rain(-14, -1);
+  const next2 = rain(app, app + 1), next3 = rain(app, app + 2), next7 = rain(app, app + 6);
+  const rain72h = rain(app, app + 2);
+
+  const appDay = weather.find(d => d.day_offset === app) || null;
+  let saturation;
+  if (appDay && appDay.soil_vwc !== null && appDay.soil_vwc !== undefined) {
+    saturation = appDay.soil_vwc >= CONFIG.SATURATION_VWC;
+  } else {
+    saturation = past7 >= 35.0 && soil.internal_drainage === "poor";
+  }
+
+  const lightSoil = CONFIG.LEACHING_SOILS.includes(soil.soil_type);
+  const leaching = lightSoil && rain72h > CONFIG.LEACHING_RAIN_MM_72H;
+
+  const windows = inRange(app, app + 4)
+    .filter(d => CONFIG.INCORP_RAIN_MIN_MM <= d.precip_mm && d.precip_mm <= CONFIG.INCORP_RAIN_MAX_MM)
+    .map(d => d.day_offset);
+
+  const warm = inRange(app, app + 2).some(d => d.tmax_c >= CONFIG.VOLAT_TMAX_C);
+  const volat = plan.kind === "nitrogen" && next3 < CONFIG.INCORP_RAIN_MIN_MM && warm;
+  const denit = saturation;
+
+  let dt = null, windOk = null, inversion = null;
+  if (plan.kind === "herbicide" && appDay) {
+    dt = deltaT(appDay.tmax_c, appDay.rh_pct);
+    windOk = CONFIG.WIND_MIN_KMH <= appDay.wind_kmh && appDay.wind_kmh <= CONFIG.WIND_MAX_KMH;
+    inversion = appDay.wind_kmh < CONFIG.WIND_MIN_KMH;
+  }
+
+  return {
+    past7_rain_mm: past7, past14_rain_mm: past14,
+    next2_rain_mm: next2, next3_rain_mm: next3, next7_rain_mm: next7,
+    saturation_flag: saturation, leaching_risk: leaching,
+    volatilisation_risk: volat, denitrification_risk: denit,
+    incorporation_windows: windows,
+    delta_t: dt, wind_ok: windOk, inversion_risk: inversion,
+  };
+}
+
+function costOfError(plan) {
+  const ureaCostPerHa = plan.rate_kg_ha * (CONFIG.UREA_PRICE_PER_T / 1000.0);
+  return [pyRound(ureaCostPerHa * CONFIG.BAD_TIMING_LOSS_LOW, 1),
+          pyRound(ureaCostPerHa * CONFIG.BAD_TIMING_LOSS_HIGH, 1)];
+}
+
+// ------------------------------------------------------------------ perception (mock path)
+function defaultObservation(notes) {
+  return { leaf_position: "unknown", colour_pattern: "unknown", distribution: "unknown",
+           vigour: "unknown", waterlogging_cues: false, image_quality: 0.0, notes: notes || "" };
+}
+function perceive(prior) {
+  if (prior !== null && prior !== undefined) return prior;
+  return defaultObservation("no image / mock mode; observations entered elsewhere");
+}
+
+// ------------------------------------------------------------------ reasoning
+const SOURCE = {
+  nitrogen_deficiency: "n_symptom", waterlogging: "waterlog_symptom",
+  sulfur_deficiency: "s_symptom", herbicide_damage: "herbicide_damage",
+  disease: "n_symptom", frost: "n_symptom", other: "n_symptom",
+};
+const CAUSES = ["nitrogen_deficiency", "waterlogging", "sulfur_deficiency",
+                "herbicide_damage", "disease", "frost", "other"];
+
+function heuristicDifferential(obs, sig, inp) {
+  const scores = {}, evFor = {}, evAgainst = {};
+  for (const c of CAUSES) { scores[c] = 0.0; evFor[c] = []; evAgainst[c] = []; }
+
+  // waterlogging
+  if (sig.saturation_flag) { scores.waterlogging += 0.5; evFor.waterlogging.push("soil saturated (probe/model)"); }
+  if (obs.distribution === "low_lying" || inp.soil.low_lying_strip) {
+    scores.waterlogging += 0.2; evFor.waterlogging.push("symptom in low-lying area");
+  }
+  if (obs.waterlogging_cues) { scores.waterlogging += 0.15; evFor.waterlogging.push("visible waterlogging cues"); }
+  if (sig.past7_rain_mm >= 30 && inp.soil.internal_drainage === "poor") {
+    scores.waterlogging += 0.15;
+    evFor.waterlogging.push(`${sig.past7_rain_mm.toFixed(0)} mm last 7 d on poorly-drained soil`);
+  }
+  if ((inp.cases || []).some(c => c.outcome === "resolved" && (c.symptom + c.note).toLowerCase().includes("waterlog"))) {
+    scores.waterlogging += 0.1;
+    evFor.waterlogging.push("same paddock recovered from waterlogging before (case memory)");
+  }
+
+  // nitrogen deficiency
+  if (obs.leaf_position === "older" || obs.leaf_position === "all") {
+    scores.nitrogen_deficiency += 0.35; evFor.nitrogen_deficiency.push("older-leaf yellowing");
+  }
+  if (obs.colour_pattern === "uniform_chlorosis") scores.nitrogen_deficiency += 0.1;
+  if (sig.saturation_flag) {
+    scores.nitrogen_deficiency -= 0.3;
+    evAgainst.nitrogen_deficiency.push("saturated soil mimics N deficiency and loses applied N");
+  }
+  if (obs.leaf_position === "younger") {
+    evAgainst.nitrogen_deficiency.push("N deficiency shows on OLDER leaves, not younger");
+  }
+
+  // sulfur deficiency
+  if (obs.leaf_position === "younger") {
+    scores.sulfur_deficiency += 0.5;
+    evFor.sulfur_deficiency.push("youngest-leaf paling (S is immobile)");
+  }
+
+  // herbicide damage
+  if (obs.distribution === "along_lines") {
+    scores.herbicide_damage += 0.4; evFor.herbicide_damage.push("damage along spray runs");
+  }
+  if ((inp.history || []).some(t => t.kind === "herbicide" && (t.moa_group === "B" || t.moa_group === "2"))) {
+    scores.herbicide_damage += 0.1;
+    evFor.herbicide_damage.push("Group 2 residual in paddock history");
+  }
+
+  // disease (weak)
+  if (obs.distribution === "patchy" && obs.vigour === "poor" && !sig.saturation_flag) {
+    scores.disease += 0.2; evFor.disease.push("patchy poor-vigour zones");
+  }
+
+  if ((inp.farmer_note || "").toLowerCase().includes("frost")) {
+    scores.frost += 0.4; evFor.frost.push("farmer mentioned frost");
+  }
+
+  const pos = {}; for (const c of CAUSES) pos[c] = Math.max(0.0, scores[c]);
+  const total = Object.values(pos).reduce((a, b) => a + b, 0) || 1.0;
+  let hyps = [];
+  for (const c of CAUSES) {
+    const lk = pyRound(pos[c] / total, 3);
+    if (lk > 0.02) {
+      hyps.push({ cause: c, likelihood: lk, evidence_for: evFor[c],
+                  evidence_against: evAgainst[c], source: SOURCE[c] });
+    }
+  }
+  if (!hyps.length) {
+    hyps = [{ cause: "other", likelihood: 1.0, evidence_for: ["insufficient signal"],
+              evidence_against: [], source: SOURCE.other }];
+  }
+  hyps.sort((a, b) => b.likelihood - a.likelihood); // stable
+  return hyps;
+}
+
+const diffLeading = hyps => hyps.reduce((m, h) => (h.likelihood > m.likelihood ? h : m), hyps[0]);
+const diffMargin = hyps => hyps.length > 1 ? hyps[0].likelihood - hyps[1].likelihood : 1.0;
+
+function reasonWindow(sig) {
+  if (sig.incorporation_windows.length) {
+    return { start_day_offset: Math.min(...sig.incorporation_windows),
+             end_day_offset: Math.max(...sig.incorporation_windows),
+             reason: "Light-rain window (5-15 mm) incorporates urea without leaching." };
+  }
+  return null;
+}
+
+function clarifying(hyps) {
+  if (diffMargin(hyps) >= 0.15) return null;
+  const top2 = hyps.slice(0, 2).map(h => h.cause);
+  if (top2.includes("nitrogen_deficiency") && top2.includes("waterlogging"))
+    return "Is the yellowing worst in the low-lying part of the paddock, or spread evenly?";
+  if (top2.includes("nitrogen_deficiency") && top2.includes("sulfur_deficiency"))
+    return "Is the yellowing on the youngest leaves or the oldest leaves?";
+  return "Can you confirm where in the paddock the symptom is worst and on which leaves?";
+}
+
+function newDecision(fields) {
+  return Object.assign({
+    call: null, window: null, rate_change: null, zone_exceptions: [], hypotheses: [],
+    rationale: [], alternatives: [], cost_of_error_aud_per_ha_low: 0.0,
+    cost_of_error_aud_per_ha_high: 0.0, confidence: 0.0, follow_up: null,
+    safety_overrides: [], clarifying_question: null,
+  }, fields);
+}
+
+function heuristicIntervention(hyps, sig, inp) {
+  const lead = diffLeading(hyps);
+  const [lo, hi] = costOfError(inp.plan);
+  const q = clarifying(hyps);
+  const conf = pyRound(lead.likelihood * (q ? 0.7 : 1.0), 3);
+  const win = reasonWindow(sig);
+  const base = { hypotheses: hyps, confidence: conf,
+                 cost_of_error_aud_per_ha_low: lo, cost_of_error_aud_per_ha_high: hi,
+                 clarifying_question: q };
+
+  if (lead.cause === "waterlogging") {
+    return newDecision({ ...base,
+      call: "WAIT", window: win,
+      zone_exceptions: inp.soil.low_lying_strip
+        ? ["Low-lying strip: exclude until probe shows drainage."] : [],
+      rationale: ["Symptom most consistent with transient waterlogging, not N shortfall.",
+                  "Applying N now risks volatilisation, leaching and denitrification at once.",
+                  "Do NOT cut the planned rate: a wet start can raise yield potential; fix TIMING."],
+      alternatives: [{ action: "Split application",
+                       why: "Apply once soil drains and a 5-15 mm incorporation window appears." }],
+      follow_up: { action: "Re-photograph drained area; if still yellow, tissue test for N.", in_days: 7 },
+    });
+  }
+
+  if (lead.cause === "sulfur_deficiency") {
+    return newDecision({ ...base,
+      call: "INSPECT",
+      rationale: ["Youngest-leaf paling points to sulfur, not nitrogen.",
+                  "A urea top-dress would not correct sulfur deficiency."],
+      alternatives: [{ action: "Switch product",
+                       why: "Consider a sulfur-containing fertiliser; confirm with a tissue test first." }],
+      rate_change: "switch to S-containing product",
+      follow_up: { action: "Tissue test for S and N to confirm.", in_days: 3 },
+    });
+  }
+
+  if (lead.cause === "herbicide_damage") {
+    return newDecision({ ...base,
+      call: "INSPECT",
+      rationale: ["Pattern/history suggests residual herbicide effect, not a nutrient issue.",
+                  "N will not fix herbicide damage; confirm before spending inputs."],
+      follow_up: { action: "Confirm damage pattern vs spray runs; review plant-back.", in_days: 5 },
+    });
+  }
+
+  if (lead.cause === "disease" || lead.cause === "frost" || lead.cause === "other") {
+    return newDecision({ ...base,
+      call: "INSPECT",
+      rationale: [`Leading hypothesis (${lead.cause}) is not corrected by nitrogen.`,
+                  "Inspect before applying to avoid a wasted pass."],
+      follow_up: { action: "Ground-truth the cause before any application.", in_days: 3 },
+    });
+  }
+
+  // nitrogen_deficiency
+  if (sig.saturation_flag || sig.leaching_risk) {
+    return newDecision({ ...base,
+      call: "WAIT", window: win,
+      rationale: ["Likely N deficiency, but conditions would lose the N if applied now.",
+                  "Wait for a safe incorporation window."],
+      follow_up: { action: "Apply in the identified window; verify greening in 7 d.", in_days: 7 },
+    });
+  }
+  if (sig.volatilisation_risk && !sig.incorporation_windows.length) {
+    return newDecision({ ...base,
+      call: "WAIT", window: win,
+      rationale: ["Likely N deficiency, but warm/dry with no incorporating rain -> volatilisation.",
+                  "Wait for light rain to move urea in."],
+      follow_up: { action: "Apply when 5-15 mm is forecast within a few days.", in_days: 5 },
+    });
+  }
+  return newDecision({ ...base,
+    call: "GO", window: win,
+    rationale: ["Symptom consistent with N deficiency and conditions favour uptake without loss."],
+    alternatives: [{ action: "Delay to a rain window",
+                     why: "If you prefer surer incorporation, apply on the next 5-15 mm day." }],
+    follow_up: { action: "Verify greening; re-photograph.", in_days: 7 },
+  });
+}
+
+// ------------------------------------------------------------------ safety
+function nextIncorpWindow(sig) {
+  if (sig.incorporation_windows.length) {
+    return { start_day_offset: Math.min(...sig.incorporation_windows),
+             end_day_offset: Math.max(...sig.incorporation_windows),
+             reason: "Light rain window incorporates urea without leaching." };
+  }
+  return null;
+}
+
+function bigRateDeviation(rateChange) {
+  const m = /(-?\d+(?:\.\d+)?)\s*%/.exec(rateChange);
+  if (!m) return false;
+  return Math.abs(parseFloat(m[1])) > CONFIG.RATE_DEVIATION_ALLOWED * 100;
+}
+
+function applySafety(decision, sig, inp) {
+  const overrides = [...decision.safety_overrides];
+  const plan = inp.plan;
+
+  const vetoGo = (reason, window) => {
+    if (decision.call === "GO") {
+      decision.call = window ? "WAIT" : "INSPECT";
+      if (window) decision.window = window;
+      overrides.push(reason);
+    }
+  };
+
+  if (plan.kind === "nitrogen") {
+    if (sig.saturation_flag) {
+      vetoGo("Soil saturated -> denitrification loss; GO blocked.", nextIncorpWindow(sig));
+    }
+    if (sig.leaching_risk) {
+      vetoGo(`>${CONFIG.LEACHING_RAIN_MM_72H.toFixed(0)} mm forecast within 72 h on ` +
+             `${inp.soil.soil_type}; leaching risk; GO blocked.`, nextIncorpWindow(sig));
+    }
+  }
+
+  if (plan.kind === "herbicide") {
+    if (sig.wind_ok === false) vetoGo("Wind outside label range; spray blocked.");
+    if (sig.delta_t !== null && !(CONFIG.DELTA_T_MIN <= sig.delta_t && sig.delta_t <= CONFIG.DELTA_T_MAX)) {
+      vetoGo(`Delta T ${sig.delta_t} outside ${CONFIG.DELTA_T_MIN}-${CONFIG.DELTA_T_MAX}; blocked.`);
+    }
+    if (sig.inversion_risk) vetoGo("Likely temperature inversion; drift risk; spray blocked.");
+  }
+
+  if (decision.rate_change && bigRateDeviation(decision.rate_change)) {
+    if (decision.call === "GO") {
+      decision.call = "INSPECT";
+      overrides.push("Rate change >30% of plan requires human INSPECT sign-off.");
+    }
+  }
+
+  if (decision.call === "GO" && decision.confidence < CONFIG.CONFIDENCE_GO_MIN) {
+    decision.call = "INSPECT";
+    overrides.push(`Confidence ${decision.confidence.toFixed(2)} < ` +
+                   `${CONFIG.CONFIDENCE_GO_MIN}; downgraded GO -> INSPECT.`);
+  }
+
+  if (decision.follow_up === null) {
+    decision.follow_up = { action: "Re-photograph and re-check soil moisture; escalate if worse.", in_days: 7 };
+  }
+
+  decision.safety_overrides = overrides;
+  return decision;
+}
+
+function wouldBeUnsafe(call, sig, planKind) {
+  if (call !== "GO") return false;
+  if (planKind === "nitrogen") return sig.saturation_flag || sig.leaching_risk;
+  if (planKind === "herbicide") {
+    return (sig.wind_ok === false) || Boolean(sig.inversion_risk) ||
+      (sig.delta_t !== null && !(CONFIG.DELTA_T_MIN <= sig.delta_t && sig.delta_t <= CONFIG.DELTA_T_MAX));
+  }
+  return false;
+}
+
+// ------------------------------------------------------------------ pipeline
+function runPipeline(inp, opts = {}) {
+  const { useRetrieval = true, applySafetyLayer = true, onStage = null } = opts;
+  const trace = [];
+  const stage = (name, detail) => { trace.push({ stage: name, detail }); if (onStage) onStage(name, detail); };
+
+  const obs = perceive(inp.observation);
+  stage("PERCEPTION", `leaf=${obs.leaf_position}, colour=${obs.colour_pattern}, ` +
+        `dist=${obs.distribution}, waterlogging_cues=${obs.waterlogging_cues}`);
+
+  const sig = computeSignals(inp.weather, inp.soil, inp.plan);
+  stage("SIGNALS", `past7=${sig.past7_rain_mm}mm next3=${sig.next3_rain_mm}mm ` +
+        `sat=${sig.saturation_flag} leach=${sig.leaching_risk} ` +
+        `volat=${sig.volatilisation_risk} incorp_windows=[${sig.incorporation_windows.join(", ")}]`);
+
+  const candidates = heuristicDifferential(obs, sig, inp).map(h => h.cause);
+  const ids = useRetrieval ? retrieveForHypotheses(candidates) : [];
+  stage("RETRIEVAL", "retrieved: " + (ids.length ? ids.join(", ") : "(none / ablation)"));
+
+  const hyps = heuristicDifferential(obs, sig, inp);
+  let decision = heuristicIntervention(hyps, sig, inp);
+  const lead = decision.hypotheses.length ? diffLeading(decision.hypotheses) : null;
+  stage("REASONING", `leading=${lead ? lead.cause : "?"} ` +
+        `call(pre-safety)=${decision.call} conf=${decision.confidence}`);
+
+  if (applySafetyLayer) {
+    const pre = decision.call;
+    decision = applySafety(decision, sig, inp);
+    stage("SAFETY", `${pre} -> ${decision.call}; overrides: ` +
+          (decision.safety_overrides.length ? decision.safety_overrides.join("; ") : "none"));
+  } else {
+    stage("SAFETY", "skipped (ablation)");
+  }
+
+  return { observation: obs, signals: sig, retrieved_ids: ids, decision, trace };
+}
+
+// ------------------------------------------------------------------ evaluation harness
+function naiveCall(s) {
+  const inp = s.input, obs = inp.observation;
+  let yellowish = true;
+  if (obs !== null && obs !== undefined) {
+    yellowish = (obs.colour_pattern === "uniform_chlorosis" || obs.colour_pattern === "interveinal"
+                 || obs.vigour === "poor" || obs.leaf_position === "older" || obs.leaf_position === "all");
+  }
+  const inTiming = 30 <= inp.zadoks_stage && inp.zadoks_stage <= 39;
+  return (yellowish && inTiming) ? "GO" : "INSPECT";
+}
+
+const pct = (n, d) => d ? pyRound(100.0 * n / d, 1) : 0.0;
+
+function runArm(scenarios, useRetrieval, safety) {
+  return scenarios.map(s => {
+    const r = runPipeline(s.input, { useRetrieval, applySafetyLayer: safety });
+    const lead = r.decision.hypotheses.length ? diffLeading(r.decision.hypotheses).cause : "other";
+    return { id: s.id, gold: s.gold, abstain: s.abstain, call: r.decision.call, top: lead,
+             conf: r.decision.confidence, sig: r.signals, retrieved: r.retrieved_ids,
+             kind: s.input.plan.kind, overrides: r.decision.safety_overrides };
+  });
+}
+
+function summarise(rows, name, isReasoner = true) {
+  const n = rows.length;
+  const dec = rows.filter(r => r.call === r.gold.call).length;
+  const top = isReasoner ? rows.filter(r => r.top === r.gold.top).length : 0;
+  const unsafe = rows.filter(r => wouldBeUnsafe(r.call, r.sig, r.kind)).length;
+  const retApps = rows.filter(r => r.gold.must_retrieve.length);
+  const retHit = retApps.filter(r => r.gold.must_retrieve.every(cid => r.retrieved.includes(cid))).length;
+  const abst = rows.filter(r => r.abstain);
+  const abstOk = abst.filter(r => r.call !== "GO").length;
+  return { arm: name, n, decision_acc: pct(dec, n),
+           top_hyp_acc: isReasoner ? pct(top, n) : null, unsafe_rate: pct(unsafe, n),
+           retrieval_hit: isReasoner ? pct(retHit, retApps.length) : null,
+           abstain_ok: abst.length ? pct(abstOk, abst.length) : null };
+}
+
+function calibration(rows) {
+  const buckets = { "<0.55": [], "0.55-0.75": [], ">0.75": [] };
+  for (const r of rows) {
+    const c = r.conf;
+    const b = c < 0.55 ? "<0.55" : (c <= 0.75 ? "0.55-0.75" : ">0.75");
+    buckets[b].push(r.call === r.gold.call);
+  }
+  const out = {};
+  for (const [b, v] of Object.entries(buckets)) out[b] = { n: v.length, acc: pct(v.filter(Boolean).length, v.length) };
+  return out;
+}
+
+function runEval(scenarios) {
+  const rulesNosafe = runArm(scenarios, false, false);
+  const full = runArm(scenarios, true, true);
+  const naive = scenarios.map(s => {
+    const r = runPipeline(s.input, { useRetrieval: true, applySafetyLayer: false });
+    return { id: s.id, gold: s.gold, abstain: s.abstain, call: naiveCall(s), top: "-",
+             conf: 1.0, sig: r.signals, retrieved: [], kind: s.input.plan.kind, overrides: [] };
+  });
+
+  const unsafeReasoner = full.filter(r => wouldBeUnsafe(r.call, r.sig, r.kind)).length;
+  const naiveUnsafeBefore = naive.filter(r => wouldBeUnsafe(r.call, r.sig, r.kind)).length;
+  let naiveAfter = 0;
+  naive.forEach((r, i) => {
+    const d = applySafety(newDecision({ call: r.call, confidence: 1.0 }), r.sig, scenarios[i].input);
+    if (wouldBeUnsafe(d.call, r.sig, r.kind)) naiveAfter += 1;
+  });
+
+  // consistency: 3 identical runs (deterministic, but measured honestly)
+  const callsById = new Map();
+  for (let k = 0; k < 3; k++) {
+    for (const r of runArm(scenarios, true, true)) {
+      if (!callsById.has(r.id)) callsById.set(r.id, new Set());
+      callsById.get(r.id).add(r.call);
+    }
+  }
+  const consistency = pct([...callsById.values()].filter(v => v.size === 1).length, callsById.size);
+
+  return {
+    arms: [summarise(naive, "naive_threshold", false),
+           summarise(rulesNosafe, "rules_only (no retrieval, no safety)"),
+           summarise(full, "greenlight (full)")],
+    reasoner_unsafe_rate: pct(unsafeReasoner, scenarios.length),
+    safety_demo_naive_unsafe_before: pct(naiveUnsafeBefore, scenarios.length),
+    safety_demo_naive_unsafe_after: pct(naiveAfter, scenarios.length),
+    calibration_full: calibration(full),
+    consistency_full: consistency,
+    provider: "deterministic (in-browser)",
+    detail: full.map(r => ({ id: r.id, call: r.call, gold: r.gold.call, top: r.top,
+                             gold_top: r.gold.top, conf: r.conf, ok: r.call === r.gold.call })),
+  };
+}
+
+const GreenlightEngine = {
+  CONFIG, CORPUS, HYP_QUERIES, computeSignals, costOfError, heuristicDifferential,
+  heuristicIntervention, applySafety, wouldBeUnsafe, runPipeline, runEval, naiveCall,
+  retrieveForHypotheses, deltaT, pyRound,
+};
+if (typeof module !== "undefined") module.exports = GreenlightEngine;
+
+</script>
+<script>
+const DATA = {"demo_order":["S07_adversarial_waterlog","S02_true_N_go","S03_N_leaching_wait","S05_sulfur","S24_volat_hot_windy","S13_case_memory","S09_missing_obs_saturated","S17_clay_heavy_rain_go"],"scenarios":[{"id":"S01_waterlog_flip","title":"Older-leaf yellow, low-lying, saturated, front coming","gold":{"call":"WAIT","top":"waterlogging","must_retrieve":["waterlog_symptom","denitrification"],"unsafe_if":["GO"]},"abstain":false,"input":{"paddock":"S01_waterlog_flip","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"duplex","internal_drainage":"poor","low_lying_strip":true},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"low_lying","vigour":"poor","waterlogging_cues":true,"image_quality":0.8,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":48,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.46},{"day_offset":1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":35,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":8,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S02_true_N_go","title":"Older-leaf uniform yellow, moist, incorporation window","gold":{"call":"GO","top":"nitrogen_deficiency","must_retrieve":["n_symptom","incorporation"],"unsafe_if":[]},"abstain":false,"input":{"paddock":"S02_true_N_go","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"sandy_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"uniform","vigour":"moderate","waterlogging_cues":false,"image_quality":0.8,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":10,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.3},{"day_offset":1,"precip_mm":8,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S03_N_leaching_wait","title":"N-like symptom but 40 mm in 72 h on sandy loam","gold":{"call":"WAIT","top":"nitrogen_deficiency","must_retrieve":["leaching"],"unsafe_if":["GO"]},"abstain":false,"input":{"paddock":"S03_N_leaching_wait","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"sandy_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"uniform","vigour":"unknown","waterlogging_cues":false,"image_quality":0.7,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":12,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.3},{"day_offset":1,"precip_mm":40,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S04_N_volat_wait","title":"N-like symptom but warm/dry, no incorporating rain","gold":{"call":"WAIT","top":"nitrogen_deficiency","must_retrieve":["incorporation"],"unsafe_if":[]},"abstain":false,"input":{"paddock":"S04_N_volat_wait","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"sandy_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"uniform","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":8,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.2},{"day_offset":1,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":26,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S05_sulfur","title":"Youngest-leaf uniform paling","gold":{"call":"INSPECT","top":"sulfur_deficiency","must_retrieve":["s_symptom"],"unsafe_if":[]},"abstain":false,"input":{"paddock":"S05_sulfur","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"sandy_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"younger","colour_pattern":"uniform_chlorosis","distribution":"uniform","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":10,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.28},{"day_offset":1,"precip_mm":8,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S06_herbicide_damage","title":"Damage along spray runs, Group 2 residual in history","gold":{"call":"INSPECT","top":"herbicide_damage","must_retrieve":["herbicide_damage"],"unsafe_if":[]},"abstain":false,"input":{"paddock":"S06_herbicide_damage","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"sandy_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"all","colour_pattern":"necrosis","distribution":"along_lines","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[{"date":"pre-sow","kind":"herbicide","product":"sulfonylurea","moa_group":"B","note":"residual"}],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":10,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":1,"precip_mm":8,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S07_adversarial_waterlog","title":"Looks like N (older uniform) but low-lying + saturated + rain","gold":{"call":"WAIT","top":"waterlogging","must_retrieve":["waterlog_symptom","denitrification"],"unsafe_if":["GO"]},"abstain":false,"input":{"paddock":"S07_adversarial_waterlog","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"duplex","internal_drainage":"poor","low_lying_strip":true},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"low_lying","vigour":"unknown","waterlogging_cues":true,"image_quality":0,"notes":""},"farmer_note":"looks hungry to me","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":50,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.47},{"day_offset":1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":40,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S08_N_go_clay","title":"Older/all uniform yellow on clay loam, window day 2","gold":{"call":"GO","top":"nitrogen_deficiency","must_retrieve":["n_symptom"],"unsafe_if":[]},"abstain":false,"input":{"paddock":"S08_N_go_clay","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"clay_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"all","colour_pattern":"uniform_chlorosis","distribution":"uniform","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":6,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.25},{"day_offset":1,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":10,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":15,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S09_missing_obs_saturated","title":"No photo; probe saturated in low strip","gold":{"call":"WAIT","top":"waterlogging","must_retrieve":["denitrification"],"unsafe_if":["GO"]},"abstain":true,"input":{"paddock":"S09_missing_obs_saturated","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"duplex","internal_drainage":"poor","low_lying_strip":true},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":null,"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":45,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.45},{"day_offset":1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":30,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S10_ambiguous_abstain","title":"Weak, non-specific symptom, benign weather","gold":{"call":"INSPECT","top":"other","must_retrieve":[],"unsafe_if":[]},"abstain":true,"input":{"paddock":"S10_ambiguous_abstain","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"clay_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"unknown","colour_pattern":"none","distribution":"patchy","vigour":"moderate","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":8,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.26},{"day_offset":1,"precip_mm":3,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S11_frost","title":"Necrosis after a cold night; farmer mentions frost","gold":{"call":"INSPECT","top":"frost","must_retrieve":[],"unsafe_if":[]},"abstain":false,"input":{"paddock":"S11_frost","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"clay_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"all","colour_pattern":"necrosis","distribution":"patchy","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"hard frost last night","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":5,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":1,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":12,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S12_disease","title":"Patchy poor-vigour zones, not saturated","gold":{"call":"INSPECT","top":"disease","must_retrieve":[],"unsafe_if":[]},"abstain":false,"input":{"paddock":"S12_disease","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"clay_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"unknown","colour_pattern":"none","distribution":"patchy","vigour":"poor","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":10,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.25},{"day_offset":1,"precip_mm":6,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S13_case_memory","title":"Saturated low strip; paddock recovered from this before","gold":{"call":"WAIT","top":"waterlogging","must_retrieve":["waterlog_symptom"],"unsafe_if":["GO"]},"abstain":false,"input":{"paddock":"S13_case_memory","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"duplex","internal_drainage":"poor","low_lying_strip":true},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"low_lying","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[{"paddock":"S13_case_memory","season":"2yrs ago","symptom":"yellow low strip waterlogged","antecedent_rain_mm_7d":52,"action_taken":"waited","outcome":"resolved","note":"recovered without extra N"}],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":46,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.45},{"day_offset":1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":20,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S14_N_go_day3","title":"Older uniform yellow, cool, 12 mm forecast day 3","gold":{"call":"GO","top":"nitrogen_deficiency","must_retrieve":["n_symptom"],"unsafe_if":[]},"abstain":false,"input":{"paddock":"S14_N_go_day3","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"sandy_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"uniform","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":8,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.28},{"day_offset":1,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":12,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S15_sat_clay","title":"Clay, saturated (probe), older uniform","gold":{"call":"WAIT","top":"waterlogging","must_retrieve":["denitrification"],"unsafe_if":["GO"]},"abstain":false,"input":{"paddock":"S15_sat_clay","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"clay","internal_drainage":"poor","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"uniform","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":30,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.44},{"day_offset":1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":15,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S16_leaching_sand","title":"Sand, 30 mm within 72 h","gold":{"call":"WAIT","top":"nitrogen_deficiency","must_retrieve":["leaching"],"unsafe_if":["GO"]},"abstain":false,"input":{"paddock":"S16_leaching_sand","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"sand","internal_drainage":"good","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"uniform","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":10,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.25},{"day_offset":1,"precip_mm":30,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S17_clay_heavy_rain_go","title":"Clay loam, 40 mm forecast but not a light soil","gold":{"call":"GO","top":"nitrogen_deficiency","must_retrieve":["n_symptom"],"unsafe_if":[]},"abstain":false,"input":{"paddock":"S17_clay_heavy_rain_go","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"clay_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"uniform","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":10,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.3},{"day_offset":1,"precip_mm":40,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S18_window_vs_sat","title":"Saturated but an 8 mm window also present","gold":{"call":"WAIT","top":"waterlogging","must_retrieve":["denitrification"],"unsafe_if":["GO"]},"abstain":false,"input":{"paddock":"S18_window_vs_sat","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"duplex","internal_drainage":"poor","low_lying_strip":true},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"low_lying","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":40,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.45},{"day_offset":1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":8,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S19_N_go_moderate","title":"Older uniform yellow, moderate moisture, 6 mm window","gold":{"call":"GO","top":"nitrogen_deficiency","must_retrieve":["n_symptom"],"unsafe_if":[]},"abstain":false,"input":{"paddock":"S19_N_go_moderate","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"sandy_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"uniform","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":15,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.32},{"day_offset":1,"precip_mm":6,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S20_sulfur_2","title":"Youngest-leaf interveinal paling","gold":{"call":"INSPECT","top":"sulfur_deficiency","must_retrieve":["s_symptom"],"unsafe_if":[]},"abstain":false,"input":{"paddock":"S20_sulfur_2","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"sandy_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"younger","colour_pattern":"interveinal","distribution":"uniform","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":10,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.28},{"day_offset":1,"precip_mm":8,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S21_history_no_pattern","title":"Older uniform yellow; Group 2 used pre-sow but no line pattern","gold":{"call":"GO","top":"nitrogen_deficiency","must_retrieve":["n_symptom"],"unsafe_if":[]},"abstain":false,"input":{"paddock":"S21_history_no_pattern","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"sandy_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"uniform","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[{"date":"pre-sow","kind":"herbicide","product":"sulfonylurea","moa_group":"B","note":""}],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":10,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.3},{"day_offset":1,"precip_mm":8,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":16,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S22_waterlog_no_probe","title":"No probe; heavy recent rain + poor drainage","gold":{"call":"WAIT","top":"waterlogging","must_retrieve":["waterlog_symptom"],"unsafe_if":["GO"]},"abstain":true,"input":{"paddock":"S22_waterlog_no_probe","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"duplex","internal_drainage":"poor","low_lying_strip":true},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"low_lying","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":40,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":10,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S23_dry_then_rain_go","title":"Dry spell, older uniform yellow, 10 mm forecast day 1","gold":{"call":"GO","top":"nitrogen_deficiency","must_retrieve":["incorporation"],"unsafe_if":[]},"abstain":false,"input":{"paddock":"S23_dry_then_rain_go","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"sandy_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"uniform","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":2,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.18},{"day_offset":1,"precip_mm":10,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":18,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}},{"id":"S24_volat_hot_windy","title":"Hot, windy, dry -> ammonia volatilisation","gold":{"call":"WAIT","top":"nitrogen_deficiency","must_retrieve":["incorporation"],"unsafe_if":[]},"abstain":false,"input":{"paddock":"S24_volat_hot_windy","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"sandy_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"older","colour_pattern":"uniform_chlorosis","distribution":"uniform","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":-3,"precip_mm":6,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":0.2},{"day_offset":1,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":28,"rh_pct":60,"wind_kmh":20,"soil_vwc":null}]}},{"id":"S25_low_conf_escalate","title":"Non-specific symptom, no probe, thin evidence","gold":{"call":"INSPECT","top":"other","must_retrieve":[],"unsafe_if":[]},"abstain":true,"input":{"paddock":"S25_low_conf_escalate","crop":"wheat","zadoks_stage":31,"soil":{"soil_type":"clay_loam","internal_drainage":"moderate","low_lying_strip":false},"plan":{"kind":"nitrogen","product":"urea","rate_kg_ha":130,"n_rate_kg_ha":60,"intended_date_offset_days":0},"observation":{"leaf_position":"unknown","colour_pattern":"unknown","distribution":"unknown","vigour":"unknown","waterlogging_cues":false,"image_quality":0,"notes":""},"farmer_note":"","history":[],"cases":[],"weather":[{"day_offset":-14,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-13,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-12,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-11,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-10,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-9,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-8,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-7,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-6,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-5,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-4,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-3,"precip_mm":9,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-2,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":-1,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":0,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":0.27},{"day_offset":1,"precip_mm":4,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":2,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":3,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":4,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":5,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null},{"day_offset":6,"precip_mm":0,"tmax_c":17,"rh_pct":60,"wind_kmh":8,"soil_vwc":null}]}}]};
+</script>
+<script>
+"use strict";
+const E = GreenlightEngine;
+const $ = sel => document.querySelector(sel);
+const esc = s => String(s).replace(/[&<>"']/g,
+  c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const cap = s => s.replace(/_/g, " ");
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const CALL_EXPL = {
+  GO: "Apply as planned — conditions favour uptake without loss.",
+  WAIT: "Hold for a better window — applying now would lose the input.",
+  SWITCH: "Change the input — this product won't fix the diagnosed cause.",
+  INSPECT: "Get more information first — don't spend inputs on an unconfirmed cause.",
+};
+
+const byId = {}; DATA.scenarios.forEach(s => byId[s.id] = s);
+const tour = DATA.demo_order.filter(id => byId[id]);
+const rest = DATA.scenarios.map(s => s.id).filter(id => !tour.includes(id));
+
+const state = { view: "advisor", sel: tour[0], useRetrieval: true, useSafety: true, ran: false };
+
+const CUSTOM_DEFAULTS = {
+  hasObs: true, leaf: "older", colour: "uniform_chlorosis", dist: "uniform", vigour: "moderate",
+  cues: false, soil: "duplex", drainage: "moderate", lowlying: false,
+  past7: 10, futmm: 8, futday: 1, tmax: 17, vwc: "0.30", rate: 130,
+};
+let custom = { ...CUSTOM_DEFAULTS };
+
+// ------------------------------------------------------------- input builders
+function buildCustomInput() {
+  const past = [];
+  for (let i = 0; i < 7; i++) past.push({ precip_mm: 0, tmax_c: custom.tmax, rh_pct: 60, wind_kmh: 8 });
+  for (let off = -7; off < 0; off++) {
+    past.push({ precip_mm: off === -3 ? Number(custom.past7) : 0, tmax_c: custom.tmax, rh_pct: 60, wind_kmh: 8 });
+  }
+  const future = [];
+  for (let i = 0; i < 7; i++) {
+    const d = { precip_mm: i === Number(custom.futday) ? Number(custom.futmm) : 0,
+                tmax_c: Number(custom.tmax), rh_pct: 60, wind_kmh: 8, soil_vwc: null };
+    if (i === 0 && custom.vwc !== "" && custom.vwc !== null) d.soil_vwc = Number(custom.vwc);
+    future.push(d);
+  }
+  const weather = [];
+  past.forEach((d, i) => weather.push({ day_offset: -(past.length - i), soil_vwc: null, ...d }));
+  future.forEach((d, i) => weather.push({ day_offset: i, ...d }));
+  return {
+    paddock: "custom", crop: "wheat", zadoks_stage: 31,
+    soil: { soil_type: custom.soil, internal_drainage: custom.drainage, low_lying_strip: custom.lowlying },
+    plan: { kind: "nitrogen", product: "urea", rate_kg_ha: Number(custom.rate),
+            n_rate_kg_ha: Number(custom.rate) * 0.46, intended_date_offset_days: 0 },
+    observation: custom.hasObs ? {
+      leaf_position: custom.leaf, colour_pattern: custom.colour, distribution: custom.dist,
+      vigour: custom.vigour, waterlogging_cues: custom.cues, image_quality: 0.8, notes: "entered in app",
+    } : null,
+    farmer_note: "", history: [], cases: [], weather,
+  };
+}
+const currentInput = () => state.sel === "custom" ? buildCustomInput() : byId[state.sel].input;
+const currentTitle = () => state.sel === "custom" ? "Custom paddock" : byId[state.sel].title;
+
+// ------------------------------------------------------------- advisor rendering
+function railHtml() {
+  const item = id => {
+    const s = byId[id];
+    return `<button data-pad="${id}" aria-current="${state.sel === id}">
+      <span class="pid mono">${esc(id)}</span>${esc(s.title)}</button>`;
+  };
+  return `
+  <div class="rail">
+    <div class="panel">
+      <div class="panel-h">Paddocks</div>
+      <details class="group" open><summary>Demo tour</summary>
+        <div class="plist">${tour.map(item).join("")}</div></details>
+      <details class="group"><summary>All ${rest.length} other scenarios</summary>
+        <div class="plist">${rest.map(item).join("")}</div></details>
+      <details class="group" ${state.sel === "custom" ? "open" : ""}><summary>Build your own</summary>
+        <div class="plist"><button data-pad="custom" aria-current="${state.sel === "custom"}">
+          <span class="pid mono">CUSTOM</span>Describe a paddock and run the engine on it</button></div>
+      </details>
+    </div>
+    <div class="panel">
+      <div class="panel-h">Engine</div>
+      <div class="panel-b">
+        <div class="togglerow"><span class="lab">Use retrieval (RAG)</span>
+          <button class="switchbtn" id="tg-ret" aria-pressed="${state.useRetrieval}" aria-label="Use retrieval"></button></div>
+        <div class="togglerow"><span class="lab">Apply safety layer</span>
+          <button class="switchbtn" id="tg-safe" aria-pressed="${state.useSafety}" aria-label="Apply safety layer"></button></div>
+        <p class="enginenote">Reasoner: <b>deterministic</b> — runs entirely in your browser.
+        Turning a toggle off shows the ablation the evaluation measures.</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+function customFormHtml() {
+  const sel = (id, opts, val) => `<select id="${id}">` +
+    opts.map(o => `<option value="${o}" ${o === val ? "selected" : ""}>${cap(o)}</option>`).join("") + "</select>";
+  return `<div class="panel"><div class="panel-h">Custom paddock — wheat, Z31, urea top-dress</div>
+  <div class="panel-b"><div class="cform">
+    <div class="formsect">What you can see</div>
+    <div class="fld fld-check span2"><input type="checkbox" id="c-hasobs" ${custom.hasObs ? "checked" : ""}>
+      <label for="c-hasobs">Field observation available (untick for the no-photo path)</label></div>
+    <div class="fld"><label for="c-leaf">Yellowing on which leaves</label>
+      ${sel("c-leaf", ["older", "younger", "all", "unknown"], custom.leaf)}</div>
+    <div class="fld"><label for="c-colour">Colour pattern</label>
+      ${sel("c-colour", ["uniform_chlorosis", "interveinal", "tip_burn", "purpling", "necrosis", "none", "unknown"], custom.colour)}</div>
+    <div class="fld"><label for="c-dist">Where in the paddock</label>
+      ${sel("c-dist", ["patchy", "uniform", "along_lines", "low_lying", "unknown"], custom.dist)}</div>
+    <div class="fld"><label for="c-vig">Crop vigour</label>
+      ${sel("c-vig", ["poor", "moderate", "good", "unknown"], custom.vigour)}</div>
+    <div class="fld fld-check span2"><input type="checkbox" id="c-cues" ${custom.cues ? "checked" : ""}>
+      <label for="c-cues">Visible waterlogging cues (ponding, smell, grey roots)</label></div>
+    <div class="formsect">Paddock</div>
+    <div class="fld"><label for="c-soil">Soil type</label>
+      ${sel("c-soil", ["sand", "loamy_sand", "sandy_loam", "duplex", "clay_loam", "clay"], custom.soil)}</div>
+    <div class="fld"><label for="c-drain">Internal drainage</label>
+      ${sel("c-drain", ["poor", "moderate", "good"], custom.drainage)}</div>
+    <div class="fld fld-check span2"><input type="checkbox" id="c-low" ${custom.lowlying ? "checked" : ""}>
+      <label for="c-low">Symptom sits in a low-lying strip</label></div>
+    <div class="formsect">Weather &amp; plan</div>
+    <div class="fld"><label for="c-past7">Rain, last 7 days (mm)</label>
+      <input type="number" id="c-past7" min="0" max="120" step="1" value="${custom.past7}"></div>
+    <div class="fld"><label for="c-tmax">Daytime max (°C)</label>
+      <input type="number" id="c-tmax" min="5" max="40" step="1" value="${custom.tmax}"></div>
+    <div class="fld"><label for="c-futmm">Forecast rain event (mm)</label>
+      <input type="number" id="c-futmm" min="0" max="80" step="1" value="${custom.futmm}"></div>
+    <div class="fld"><label for="c-futday">…falling on day</label>
+      ${sel("c-futday", ["0", "1", "2", "3", "4", "5", "6"], String(custom.futday))}</div>
+    <div class="fld"><label for="c-vwc">Soil probe VWC today (0–0.60, blank = no probe)</label>
+      <input type="number" id="c-vwc" min="0" max="0.6" step="0.01" value="${custom.vwc}"></div>
+    <div class="fld"><label for="c-rate">Planned urea rate (kg/ha)</label>
+      <input type="number" id="c-rate" min="30" max="300" step="5" value="${custom.rate}"></div>
+  </div></div></div>`;
+}
+
+function padheadHtml() {
+  const inp = currentInput();
+  const obs = inp.observation;
+  const probe = inp.weather.find(d => d.day_offset === 0);
+  const vwc = probe && probe.soil_vwc !== null && probe.soil_vwc !== undefined ? probe.soil_vwc : null;
+  const chips = [
+    `<span class="chip">Crop <b>${esc(inp.crop)} · Z${inp.zadoks_stage}</b></span>`,
+    `<span class="chip">Soil <b>${esc(cap(inp.soil.soil_type))}</b> · ${esc(inp.soil.internal_drainage)} drainage</span>`,
+    `<span class="chip">Plan <b>${esc(inp.plan.product)} ${Math.round(inp.plan.rate_kg_ha)} kg/ha</b></span>`,
+    vwc !== null ? `<span class="chip">Probe VWC <b>${vwc.toFixed(2)}</b>${vwc >= 0.42 ? " · saturated" : ""}</span>` : "",
+    inp.soil.low_lying_strip ? `<span class="chip">Low-lying strip</span>` : "",
+    obs === null ? `<span class="chip">No photo — signals only</span>` : "",
+  ].filter(Boolean).join("");
+  const note = inp.farmer_note ? `<p class="note">Farmer note: “${esc(inp.farmer_note)}”</p>` : "";
+  return `<div class="panel padhead"><h2>${esc(currentTitle())}</h2><div class="chips">${chips}</div>${note}</div>`;
+}
+
+function wxHtml() {
+  const inp = currentInput();
+  const days = [...inp.weather].sort((a, b) => a.day_offset - b.day_offset);
+  const W = 680, H = 96, base = 74, plotH = 56;
+  const maxMM = Math.max(10, ...days.map(d => d.precip_mm));
+  const slot = W / days.length, bw = Math.min(20, slot - 8);
+  const app = inp.plan.intended_date_offset_days;
+  let bars = "";
+  days.forEach((d, i) => {
+    const x = i * slot + (slot - bw) / 2;
+    const h = d.precip_mm / maxMM * plotH;
+    const past = d.day_offset < 0;
+    const incorp = d.day_offset >= app && d.day_offset <= app + 4 && d.precip_mm >= 5 && d.precip_mm <= 15;
+    const fill = past ? "var(--rain-dim)" : "var(--rain)";
+    const stroke = incorp ? `stroke="var(--accent)" stroke-width="2"` : "";
+    if (d.precip_mm > 0) {
+      bars += `<rect x="${x.toFixed(1)}" y="${(base - h).toFixed(1)}" width="${bw}" height="${h.toFixed(1)}"
+        rx="3" fill="${fill}" ${stroke}></rect>`;
+    } else {
+      bars += `<rect x="${x.toFixed(1)}" y="${base - 1.5}" width="${bw}" height="1.5" rx="0.75"
+        fill="var(--line2)"></rect>`;
+    }
+    const tip = `Day ${d.day_offset >= 0 ? "+" : ""}${d.day_offset}: ${d.precip_mm} mm · ${d.tmax_c}°C` +
+      (d.soil_vwc !== null && d.soil_vwc !== undefined ? ` · VWC ${d.soil_vwc}` : "") +
+      (incorp ? " · possible incorporation window" : "");
+    bars += `<rect x="${(i * slot).toFixed(1)}" y="0" width="${slot.toFixed(1)}" height="${base}"
+      fill="transparent" data-tip="${esc(tip)}"></rect>`;
+    if (d.day_offset === 0) {
+      bars += `<line x1="${(x + bw / 2).toFixed(1)}" y1="10" x2="${(x + bw / 2).toFixed(1)}" y2="${base}"
+        stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3"></line>`;
+    }
+  });
+  const lab = (off, txt) => {
+    const i = days.findIndex(d => d.day_offset === off);
+    if (i < 0) return "";
+    return `<text x="${(i * slot + slot / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle"
+      font-size="10" fill="var(--muted)" font-family="ui-monospace,Menlo,monospace">${txt}</text>`;
+  };
+  return `<div class="panel wx">
+    <div class="wx-h"><span class="wx-title">Rain, past 14 days → 7-day forecast</span>
+      <span class="wx-legend"><span><i style="background:var(--rain-dim)"></i>past</span>
+      <span><i style="background:var(--rain)"></i>forecast</span>
+      <span><i style="background:transparent;border:2px solid var(--accent)"></i>5–15 mm incorporation window</span></span></div>
+    <svg class="wxsvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily rain, past 14 days and 7-day forecast">
+      <line x1="0" y1="${base}" x2="${W}" y2="${base}" stroke="var(--line2)" stroke-width="1"></line>
+      <text x="2" y="12" font-size="10" fill="var(--muted)"
+        font-family="ui-monospace,Menlo,monospace">${maxMM} mm</text>
+      ${bars}${lab(-14, "-14d")}${lab(-7, "-7d")}${lab(0, "today")}${lab(6, "+6d")}
+    </svg></div>`;
+}
+
+function advisorSkeleton() {
+  return `${railHtml()}
+  <div class="main">
+    ${state.sel === "custom" ? customFormHtml() : ""}
+    ${padheadHtml()}
+    ${wxHtml()}
+    <div class="runrow">
+      <button class="btn btn-primary" id="btn-run">Check this application</button>
+      <span class="runhint">Perception → signals → retrieval → reasoning → safety, live.</span>
+    </div>
+    <div id="run-out"></div>
+  </div>`;
+}
+
+function decisionHtml(res) {
+  const d = res.decision;
+  const confPct = Math.round(d.confidence * 100);
+  const over = d.safety_overrides.length ? `<div class="alert alert-safety"><b>Safety layer overruled the model</b>
+    <ul>${d.safety_overrides.map(o => `<li>${esc(o)}</li>`).join("")}</ul></div>` : "";
+  const win = d.window ? `<div class="alert alert-window"><b>Window</b>
+    days ${d.window.start_day_offset}–${d.window.end_day_offset} from now — ${esc(d.window.reason)}</div>` : "";
+  const q = d.clarifying_question ? `<div class="alert alert-question"><b>Clarifying question</b>
+    ${esc(d.clarifying_question)}</div>` : "";
+  const alts = d.alternatives.length ? `<div><div class="sect-h">Alternatives</div>
+    <ul class="altlist">${d.alternatives.map(a => `<li><b>${esc(a.action)}</b> — ${esc(a.why)}</li>`).join("")}</ul></div>` : "";
+  const fu = d.follow_up ? `<div class="tile"><div class="tl">Follow-up</div>
+    <div class="tv">in ${d.follow_up.in_days} d</div><div class="ts">${esc(d.follow_up.action)}</div></div>` : "";
+  return `<div class="panel decision call-${d.call}">
+    <div class="callstrip"><div class="word">${d.call}</div><div class="expl">${CALL_EXPL[d.call]}</div></div>
+    <div class="decision-b">
+      <div class="confwrap">
+        <div class="conflab"><span>Confidence</span><span class="mono">${confPct}%</span></div>
+        <div class="confbar"><div class="conffill" style="width:${confPct}%"></div>
+          <div class="conftick" style="left:55%"></div></div>
+        <span class="conftick-lab">tick = 0.55 GO gate: below it the safety layer blocks GO</span>
+      </div>
+      ${over}${win}${q}
+      <div><div class="sect-h">Why</div>
+        <ul class="whylist">${d.rationale.map(r => `<li>${esc(r)}</li>`).join("")}</ul></div>
+      ${d.zone_exceptions.length ? `<div><div class="sect-h">Zone exceptions</div>
+        <ul class="altlist">${d.zone_exceptions.map(z => `<li>${esc(z)}</li>`).join("")}</ul></div>` : ""}
+      ${alts}
+      <div class="tiles">
+        <div class="tile"><div class="tl">Input $ at risk if mistimed</div>
+          <div class="tv mono">$${Math.round(d.cost_of_error_aud_per_ha_low)}–${Math.round(d.cost_of_error_aud_per_ha_high)}</div>
+          <div class="ts">AUD per hectare, demo estimate</div></div>
+        ${fu}
+      </div>
+    </div></div>`;
+}
+
+function evidenceHtml(res) {
+  const hyps = res.decision.hypotheses;
+  const rows = hyps.map((h, i) => `<div class="hyp ${i === 0 ? "lead" : ""}">
+    <div class="hh"><span class="nm">${esc(cap(h.cause))}</span>
+      <span class="pc mono">${Math.round(h.likelihood * 100)}%</span></div>
+    <div class="bar"><div class="fill" style="width:${Math.min(100, h.likelihood * 100)}%"></div></div>
+    ${h.evidence_for.map(e => `<div class="ev ev-for"><span class="sig">+</span><span>${esc(e)}</span></div>`).join("")}
+    ${h.evidence_against.map(e => `<div class="ev ev-against"><span class="sig">−</span><span>${esc(e)}</span></div>`).join("")}
+  </div>`).join("");
+  const chunks = res.retrieved_ids.map(cid => `<div class="gchunk">
+    <span class="cid mono">[${cid}]</span> ${esc(E.CORPUS[cid].text)}
+    <span class="src">${esc(E.CORPUS[cid].source)}</span></div>`).join("");
+  return `<div class="panel diffcard">
+      <div class="panel-h">Differential — retrieved for and against each cause</div>
+      <div class="panel-b">${rows}</div>
+      <details class="exp"><summary>Observation — perception output, no diagnosis</summary>
+        <div class="exp-b"><pre class="json">${esc(JSON.stringify(res.observation, null, 2))}</pre></div></details>
+      <details class="exp"><summary>Derived signals — deterministic</summary>
+        <div class="exp-b"><pre class="json">${esc(JSON.stringify(res.signals, null, 2))}</pre></div></details>
+      <details class="exp"><summary>Retrieved guidelines (${res.retrieved_ids.length})</summary>
+        <div class="exp-b"><p class="gnote">Hypothesis-driven retrieval pulls the chunk that lets the system
+          <i>reject</i> a lookalike cause — not just the one that confirms the leader.</p>${chunks}</div></details>
+    </div>`;
+}
+
+function runCheck() {
+  const res = E.runPipeline(currentInput(),
+    { useRetrieval: state.useRetrieval, applySafetyLayer: state.useSafety });
+  const out = $("#run-out");
+  const stages = res.trace.map((t, i) => `<div class="stage" data-i="${i}">
+    <span class="n mono">${i + 1}</span><span class="nm">${esc(t.stage)}</span>
+    <span class="dt mono">${esc(t.detail)}</span></div>`).join("");
+  out.innerHTML = `<div class="panel trace" style="margin-bottom:18px">${stages}</div>
+    <div class="results" id="res-grid" style="opacity:0">
+      ${decisionHtml(res)}${evidenceHtml(res)}</div>`;
+  const stageEls = out.querySelectorAll(".stage");
+  const grid = $("#res-grid");
+  if (REDUCED) {
+    stageEls.forEach(el => el.classList.add("on"));
+    grid.style.transition = "none"; grid.style.opacity = 1;
+  } else {
+    stageEls.forEach((el, i) => setTimeout(() => el.classList.add("on"), 90 + i * 230));
+    grid.style.transition = "opacity .4s ease";
+    setTimeout(() => { grid.style.opacity = 1; }, 90 + stageEls.length * 230);
+  }
+}
+
+// ------------------------------------------------------------- evaluation view
+let evalDone = false;
+function renderEval() {
+  if (evalDone) return;
+  evalDone = true;
+  const r = E.runEval(DATA.scenarios);
+  const fmt = v => v === null ? "–" : v;
+  const armRows = r.arms.map((a, i) => `<tr class="${i === 2 ? "hero-row" : ""}">
+    <td>${esc(a.arm)}</td><td class="num mono">${a.n}</td><td class="num mono">${a.decision_acc}</td>
+    <td class="num mono">${fmt(a.top_hyp_acc)}</td><td class="num mono">${a.unsafe_rate}</td>
+    <td class="num mono">${fmt(a.retrieval_hit)}</td><td class="num mono">${fmt(a.abstain_ok)}</td></tr>`).join("");
+  const calRows = Object.entries(r.calibration_full).map(([b, v]) =>
+    `<tr><td class="mono">${b}</td><td class="num mono">${v.n}</td><td class="num mono">${v.acc}%</td></tr>`).join("");
+  const detRows = r.detail.map(d => `<tr>
+    <td class="mono">${esc(d.id)}</td>
+    <td><span class="badge badge-${d.call}">${d.call}</span></td>
+    <td><span class="badge badge-${d.gold}">${d.gold}</span></td>
+    <td>${esc(cap(d.top))}</td><td>${esc(cap(d.gold_top))}</td>
+    <td class="num mono">${d.conf.toFixed(2)}</td>
+    <td class="${d.ok ? "ok-yes" : "ok-no"}">${d.ok ? "✓" : "✗"}</td></tr>`).join("");
+  $("#view-eval").innerHTML = `
+    <div class="stat-row">
+      <div class="stat"><div class="sl">Naive baseline, unsafe GOs</div>
+        <div class="sv">${r.safety_demo_naive_unsafe_before}% <span class="arr">→</span>
+          <span class="good">${r.safety_demo_naive_unsafe_after}%</span></div>
+        <div class="sd">after the deterministic safety layer is bolted on</div></div>
+      <div class="stat"><div class="sl">Greenlight reasoner, unsafe rate</div>
+        <div class="sv good">${r.reasoner_unsafe_rate}%</div>
+        <div class="sd">safe by construction; the net catches model errors</div></div>
+      <div class="stat"><div class="sl">Decision accuracy (full)</div>
+        <div class="sv">${r.arms[2].decision_acc}%</div>
+        <div class="sd">vs ${r.arms[0].decision_acc}% for the naive threshold</div></div>
+      <div class="stat"><div class="sl">Consistency, 3 runs</div>
+        <div class="sv">${r.consistency_full}%</div>
+        <div class="sd">same call on every scenario, every run</div></div>
+    </div>
+    <div class="panel"><div class="panel-h">Ablation — 25 scenarios, computed live in this browser</div>
+      <div class="tablewrap"><table class="d">
+        <thead><tr><th>Arm</th><th class="num">n</th><th class="num">Decision %</th><th class="num">Top-cause %</th>
+          <th class="num">Unsafe %</th><th class="num">Retrieval hit %</th><th class="num">Abstain OK %</th></tr></thead>
+        <tbody>${armRows}</tbody></table></div></div>
+    <div class="panel" style="max-width:420px"><div class="panel-h">Calibration — accuracy by confidence</div>
+      <div class="tablewrap"><table class="d">
+        <thead><tr><th>Confidence</th><th class="num">n</th><th class="num">Accuracy</th></tr></thead>
+        <tbody>${calRows}</tbody></table></div></div>
+    <div class="panel"><div class="panel-h">Per-scenario detail — full pipeline</div>
+      <div class="tablewrap"><table class="d">
+        <thead><tr><th>Scenario</th><th>Call</th><th>Gold</th><th>Top cause</th><th>Gold cause</th>
+          <th class="num">Conf</th><th>OK</th></tr></thead>
+        <tbody>${detRows}</tbody></table></div></div>
+    <p class="honesty"><b>Honesty note.</b> Rules-only scores 100% partly because these scenarios were authored
+      alongside the heuristic — this is a consistency and architecture check, not proof of field accuracy.
+      The generalisation test is the LLM arm plus ≥50 agronomist-labelled cases, the first post-hackathon task.</p>`;
+}
+
+// ------------------------------------------------------------- wiring
+function bindAdvisor() {
+  document.querySelectorAll("[data-pad]").forEach(b => b.addEventListener("click", () => {
+    state.sel = b.dataset.pad; renderAdvisor();
+  }));
+  $("#tg-ret").addEventListener("click", () => { state.useRetrieval = !state.useRetrieval; renderAdvisor(); });
+  $("#tg-safe").addEventListener("click", () => { state.useSafety = !state.useSafety; renderAdvisor(); });
+  $("#btn-run").addEventListener("click", runCheck);
+  if (state.sel === "custom") {
+    const upd = () => {
+      custom = {
+        hasObs: $("#c-hasobs").checked, leaf: $("#c-leaf").value, colour: $("#c-colour").value,
+        dist: $("#c-dist").value, vigour: $("#c-vig").value, cues: $("#c-cues").checked,
+        soil: $("#c-soil").value, drainage: $("#c-drain").value, lowlying: $("#c-low").checked,
+        past7: $("#c-past7").value || 0, futmm: $("#c-futmm").value || 0, futday: $("#c-futday").value,
+        tmax: $("#c-tmax").value || 17, vwc: $("#c-vwc").value, rate: $("#c-rate").value || 130,
+      };
+      // refresh header + weather strip without wiping the form
+      const main = $(".main");
+      main.children[1].outerHTML = padheadHtml();
+      main.children[2].outerHTML = wxHtml();
+      bindWxTips();
+      $("#run-out").innerHTML = "";
+    };
+    document.querySelectorAll(".cform select, .cform input").forEach(el => el.addEventListener("change", upd));
+  }
+  bindWxTips();
+}
+
+function bindWxTips() {
+  const tip = $("#wxtip");
+  document.querySelectorAll("[data-tip]").forEach(el => {
+    el.addEventListener("mousemove", e => {
+      tip.textContent = el.dataset.tip;
+      tip.style.opacity = 1;
+      tip.style.left = Math.min(e.clientX + 12, innerWidth - 230) + "px";
+      tip.style.top = (e.clientY + 14) + "px";
+    });
+    el.addEventListener("mouseleave", () => { tip.style.opacity = 0; });
+  });
+}
+
+function renderAdvisor() {
+  $("#view-advisor").innerHTML = advisorSkeleton();
+  bindAdvisor();
+}
+
+function setView(v) {
+  state.view = v;
+  $("#tab-advisor").setAttribute("aria-selected", v === "advisor");
+  $("#tab-eval").setAttribute("aria-selected", v === "eval");
+  $("#view-advisor").hidden = v !== "advisor";
+  $("#view-eval").hidden = v !== "eval";
+  if (v === "eval") renderEval();
+}
+$("#tab-advisor").addEventListener("click", () => setView("advisor"));
+$("#tab-eval").addEventListener("click", () => setView("eval"));
+
+renderAdvisor();
+</script>
