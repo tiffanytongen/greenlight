@@ -6,8 +6,15 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#121814",
-    "splash": { "backgroundColor": "#121814" },
-    "ios": { "supportsTablet": true },
-    "android": { "backgroundColor": "#121814" }
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "backgroundColor": "#121814"
+    },
+    "plugins": [
+      "expo-status-bar",
+      "expo-audio"
+    ]
   }
 }
