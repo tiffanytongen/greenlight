@@ -4,3 +4,6 @@ dist/
 npm-debug.*
 *.orig.*
 web-build/
+.env
+.env.*
+!.env.example
