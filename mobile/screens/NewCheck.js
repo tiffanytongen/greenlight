@@ -154,7 +154,7 @@ export default function NewCheck({ go }) {
           {AudioMod && (
             <MicButton
               onTranscript={t => setText(prev => (prev ? prev + " " : "") + t)}
-              onNoSTT={() => setNote("Recorded — no transcription key set, so type what you said.")}
+              onNoSTT={() => setNote("Recorded, but voice-to-text needs the AI server online — type what you said.")}
             />
           )}
           {ImagePicker && (
@@ -172,8 +172,8 @@ export default function NewCheck({ go }) {
           <View style={s.photoRow}>
             <Image source={{ uri: photo }} style={s.thumb} />
             <Text style={[T.tiny, { flex: 1 }]}>
-              {hasVision() ? "Photo will be read for visual signs." :
-                "Photo saved with the check. (Add an AI key to read it automatically.)"}
+              {hasVision() ? "Photo will be read for visual signs (online AI)." :
+                "Photo saved with the check. Reading it needs the AI server online."}
             </Text>
             <Pressable onPress={() => setPhoto(null)} hitSlop={8}>
               <Text style={{ color: C.INSPECT, fontWeight: "700" }}>✕</Text>

@@ -11,6 +11,7 @@ import { C, T } from "./theme";
 import { StoreProvider, useStore } from "./store";
 import { getWeather } from "./weather";
 import { evaluateAlerts } from "./alerts";
+const api = require("./ai/api");
 import Today from "./screens/Today";
 import NewCheck from "./screens/NewCheck";
 import Result from "./screens/Result";
@@ -50,8 +51,12 @@ function Shell() {
 
   const tab = (t) => { setStack([]); setParams({}); setScreen(t); };
 
+  const [aiOnline, setAiOnline] = useState(false);
+
   const refreshAlerts = useCallback(async () => {
     try {
+      const h = await api.refreshHealth(true);
+      setAiOnline(h.ok);
       const wx = await getWeather(state.weatherMode);
       const fresh = evaluateAlerts(state, wx.days);
       if (fresh.length) dispatch({ type: "addAlerts", alerts: fresh });
@@ -85,6 +90,12 @@ function Shell() {
         ) : (
           <Text style={s.wordmark}>greenlight<Text style={{ color: C.accent }}>.</Text></Text>
         )}
+        <View style={{ flex: 1 }} />
+        <View style={[s.aiPill, { borderColor: aiOnline ? C.accent : C.line2 }]}>
+          <Text style={[s.aiPillText, aiOnline && { color: C.accent }]}>
+            {aiOnline ? "AI online" : "offline"}
+          </Text>
+        </View>
         <Text style={s.headerTitle}>{TITLES[screen] || ""}</Text>
       </View>
 
@@ -135,7 +146,10 @@ const s = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16,
             paddingVertical: 10, gap: 12 },
   wordmark: { color: C.ink, fontSize: 20, fontWeight: "800" },
-  headerTitle: { color: C.ink2, fontSize: 16, fontWeight: "600", flex: 1, textAlign: "right" },
+  headerTitle: { color: C.ink2, fontSize: 16, fontWeight: "600" },
+  aiPill: { borderWidth: 1, borderRadius: 999, paddingVertical: 2, paddingHorizontal: 9,
+            marginRight: 10 },
+  aiPillText: { color: C.muted, fontSize: 10.5, fontWeight: "700", letterSpacing: 0.4 },
   backBtn: { paddingVertical: 2 },
   backText: { color: C.accent, fontSize: 17, fontWeight: "700" },
   scroll: { padding: 14, paddingBottom: 28 },
